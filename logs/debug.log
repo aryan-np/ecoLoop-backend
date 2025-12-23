@@ -1,0 +1,7 @@
+2025-12-23 12:22:10 | DEBUG    | __main__:test_basic_logging:29 - 🔍 DEBUG: This should go to debug.log
+2025-12-23 12:22:10 | INFO     | __main__:test_basic_logging:30 - ℹ️  INFO: This should go to debug.log
+2025-12-23 12:22:10 | WARNING  | __main__:test_basic_logging:31 - ⚠️  WARNING: This should go to debug.log
+2025-12-23 12:22:10 | DEBUG    | logging:callHandlers:1762 - Django DEBUG log via standard logging
+2025-12-23 12:22:10 | INFO     | logging:callHandlers:1762 - Django INFO log via standard logging
+2025-12-23 12:22:10 | WARNING  | logging:callHandlers:1762 - Django WARNING log via standard logging
+2025-12-23 12:22:10 | INFO     | __main__:test_custom_context:73 - User action performed
