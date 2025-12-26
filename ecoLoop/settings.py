@@ -29,9 +29,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
+    "drf_spectacular",
     # Local apps
     "ecoLoop",
     "accounts",
+    "products",
 ]
 
 MIDDLEWARE = [
@@ -122,6 +124,8 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    
 }
 
 # ============================================================================
@@ -225,4 +229,13 @@ LOGGING = {
             "propagate": False,
         },
     },
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "EcoLoop API",
+    "DESCRIPTION": "API documentation for EcoLoop backend",
+    "VERSION": "1.0.0",
+    # Optional (recommended if you use JWT auth)
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
 }

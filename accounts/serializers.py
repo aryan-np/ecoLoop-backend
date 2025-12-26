@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from accounts.models import User, Role
+from accounts.models import User, Role, UserProfile
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -135,3 +135,30 @@ class LogoutSerializer(serializers.Serializer):
             token.blacklist()
         except Exception as e:
             raise serializers.ValidationError({"message": "Invalid or expired token."})
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+    full_name = serializers.CharField(source="user.full_name", read_only=True)
+    phone_number = serializers.CharField(source="user.phone_number", read_only=True)
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "phone_number",
+            # "profile_picture",
+            "address_line1",
+            "address_line2",
+            "city",
+            "area",
+            "postal_code",
+            "latitude",
+            "longitude",
+            "bio",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]

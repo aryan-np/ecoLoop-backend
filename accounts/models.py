@@ -1,11 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 
 
-# -------------------------------
-# Role Model
-# -------------------------------
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -18,9 +16,6 @@ class Role(models.Model):
         return self.name
 
 
-# -------------------------------
-# Custom User Manager
-# -------------------------------
 class UserManager(BaseUserManager):
     def create_user(
         self, email, full_name, phone_number, password=None, **extra_fields
@@ -68,9 +63,6 @@ class UserManager(BaseUserManager):
         return user
 
 
-# -------------------------------
-# Custom User Model
-# -------------------------------
 class User(AbstractUser):
     username = None
     full_name = models.CharField(max_length=150)
@@ -102,3 +94,31 @@ class User(AbstractUser):
 
     def get_full_name(self):
         return self.full_name
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+
+    # Basic profile fields (you can extend later)
+    profile_picture = models.ImageField(upload_to="profiles/", blank=True, null=True)
+    address_line1 = models.CharField(max_length=255, blank=True, null=True)
+    address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=80, blank=True, null=True)
+    area = models.CharField(max_length=80, blank=True, null=True)  # e.g., locality
+    postal_code = models.CharField(max_length=20, blank=True, null=True)
+
+    # Optional geo fields
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+
+    bio = models.TextField(blank=True, null=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Profile: {self.user.email}"
