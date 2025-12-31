@@ -15,6 +15,7 @@ from accounts.serializers import (
     UserLoginSerializer,
     LogoutSerializer,
     UserSerializer,
+    OTPVerifySerializer,
 )
 from .models import UserProfile
 from .serializers import UserProfileSerializer
@@ -27,9 +28,6 @@ from drf_spectacular.utils import (
 )
 
 
-# =========================================================
-# Auth: Registration
-# =========================================================
 class UserRegistrationView(APIView):
     """
     API view for user registration.
@@ -48,20 +46,6 @@ class UserRegistrationView(APIView):
             400: OpenApiResponse(description="Validation error."),
             500: OpenApiResponse(description="Server error."),
         },
-        examples=[
-            OpenApiExample(
-                "Register example",
-                value={
-                    "email": "user@example.com",
-                    "full_name": "John Doe",
-                    "phone_number": "9800000000",
-                    "password": "StrongPass@123",
-                    "confirm_password": "StrongPass@123",
-                    "roles": ["USER"],
-                },
-                request_only=True,
-            ),
-        ],
     )
     def post(self, request, *args, **kwargs):
         serializer = UserRegistrationSerializer(data=request.data)
@@ -72,7 +56,7 @@ class UserRegistrationView(APIView):
                     is_success=True,
                     result={
                         "message": "User registered successfully.",
-                        "user": UserSerializer(user).data,
+                        "user": user,
                     },
                     status_code=status.HTTP_201_CREATED,
                 )
@@ -90,9 +74,6 @@ class UserRegistrationView(APIView):
             )
 
 
-# =========================================================
-# Auth: Login
-# =========================================================
 class UserLoginView(APIView):
     """
     API view for user login with JWT token generation.
@@ -166,9 +147,6 @@ class UserLoginView(APIView):
             )
 
 
-# =========================================================
-# Auth: Logout (Blacklist refresh token)
-# =========================================================
 class UserLogoutView(APIView):
     """
     API view for user logout with JWT token blacklisting.
@@ -221,9 +199,6 @@ class UserLogoutView(APIView):
             )
 
 
-# =========================================================
-# Auth: Refresh access token
-# =========================================================
 class RefreshTokenView(APIView):
     """
     API view to refresh access token using refresh token.
@@ -286,15 +261,12 @@ class RefreshTokenView(APIView):
             )
 
 
-# =========================================================
-# User Profile ViewSet (CRUD + Docs)
-# =========================================================
 @extend_schema(tags=["User Profile"])
 class UserProfileViewSet(viewsets.ModelViewSet):
     queryset = UserProfile.objects.select_related("user").all()
     serializer_class = UserProfileSerializer
-    # permission_classes = [IsOwnerOrReadOnly]
-    # authentication_classes = [JWTAuthentication]
+    permission_classes = [IsOwnerOrReadOnly]
+    authentication_classes = [JWTAuthentication]
 
     @extend_schema(
         summary="List profiles",
@@ -365,3 +337,42 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class OTPVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["OTP"],
+        summary="Verify OTP",
+        description="Verify OTP for REGISTER / LOGIN / RESET_PASSWORD. OTP must be unused, unexpired, and within attempt limit.",
+        request=OTPVerifySerializer,
+        responses={
+            200: OpenApiResponse(description="OTP verified successfully."),
+            400: OpenApiResponse(description="Invalid/expired OTP."),
+            500: OpenApiResponse(description="Server error."),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = OTPVerifySerializer(data=request.data)
+        try:
+            if serializer.is_valid():
+                result = serializer.save()
+                return api_response(
+                    is_success=True,
+                    result=result,
+                    status_code=status.HTTP_200_OK,
+                )
+
+            return api_response(
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            logger.critical(f"Error during OTP verify: {str(e)}")
+            return api_response(
+                is_success=False,
+                error_message=["Something went wrong. Please try again."],
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

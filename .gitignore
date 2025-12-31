@@ -1,0 +1,57 @@
+# Environment variables
+.env
+.env.*
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+logs/
+
+# Django local settings
+local_settings.py
+
+# Migrations cache
+*/migrations/__pycache__/
+
+# Test & coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Node (if frontend exists in same repo)
+node_modules/
+
+# Log files
+*.log
+
+# dotenv backups
+.env.bak

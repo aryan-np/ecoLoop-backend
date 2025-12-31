@@ -1,7 +1,12 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from django.utils import timezone
+
+from datetime import timedelta
 
 
 class Role(models.Model):
@@ -64,6 +69,8 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = None
     full_name = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
@@ -112,8 +119,12 @@ class UserProfile(models.Model):
     postal_code = models.CharField(max_length=20, blank=True, null=True)
 
     # Optional geo fields
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True
+    )
 
     bio = models.TextField(blank=True, null=True)
 
@@ -122,3 +133,58 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"Profile: {self.user.email}"
+
+
+class OTPVerification(models.Model):
+    PURPOSE_CHOICES = (
+        ("REGISTER", "REGISTER"),
+        ("LOGIN", "LOGIN"),
+        ("RESET_PASSWORD", "RESET_PASSWORD"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # either email or phone (keeping both fields and using which is required)
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES)
+
+    otp_hash = models.CharField(max_length=128)  # storing hashed OTP
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    attempts = models.PositiveIntegerField(default=0)  # verification attempts
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    @staticmethod
+    def default_expiry(minutes=5):
+        return timezone.now() + timedelta(minutes=minutes)
+
+    def __str__(self):
+        return f"{self.purpose} OTP for {self.email or self.phone}"
+
+
+class PendingRegistration(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    email = models.EmailField(unique=True)
+    full_name = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=20)
+
+    password_hash = models.CharField(max_length=128)
+
+    is_used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    @staticmethod
+    def default_expiry(minutes=10):
+        return timezone.now() + timedelta(minutes=minutes)

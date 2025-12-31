@@ -1,23 +1,35 @@
-"""
-Django settings for ecoLoop project.
-"""
-
-from datetime import timedelta
 from pathlib import Path
-import sys
+from datetime import timedelta
 import os
+import sys
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+from dotenv import load_dotenv
+from loguru import logger
+
+# =============================================================================
+# BASE DIR & ENV
+# =============================================================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-SECRET_KEY = "django-insecure-&7hbw8-px(vb@anidb2mp7lf3#1o5b!rjb5vh947t^4hrkjx%r"
+load_dotenv(BASE_DIR / ".env")
 
-DEBUG = True
+# =============================================================================
+# CORE SETTINGS
+# =============================================================================
 
-ALLOWED_HOSTS = []
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
-# Application definition
+DEBUG = os.getenv("DJANGO_DEBUG") == "True"
+
+ALLOWED_HOSTS = [
+    h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
+]
+
+# =============================================================================
+# APPLICATION DEFINITION
+# =============================================================================
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -25,12 +37,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Third party
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
-    # Local apps
     "ecoLoop",
     "accounts",
     "products",
@@ -66,52 +76,57 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "ecoLoop.wsgi.application"
 
-# Database
+# =============================================================================
+# DATABASE
+# =============================================================================
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.getenv("DB_ENGINE"),
+        "NAME": BASE_DIR / os.getenv("DB_NAME"),
     }
 }
 
-# Custom User Model
+# =============================================================================
+# AUTH
+# =============================================================================
+
 AUTH_USER_MODEL = "accounts.User"
 
-# Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {
-            "min_length": 8,
-        },
+        "OPTIONS": {"min_length": 8},
     },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# Internationalization
+# =============================================================================
+# INTERNATIONALIZATION
+# =============================================================================
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Kathmandu"
 USE_I18N = True
 USE_TZ = True
 
-# Static files
-STATIC_URL = "static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+# =============================================================================
+# STATIC FILES
+# =============================================================================
 
-# Default primary key field type
+STATIC_URL = os.getenv("STATIC_URL", "static/")
+STATIC_ROOT = BASE_DIR / os.getenv("STATIC_ROOT", "staticfiles")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ============================================================================
-# REST FRAMEWORK CONFIGURATION
-# ============================================================================
+# =============================================================================
+# REST FRAMEWORK
+# =============================================================================
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -125,117 +140,102 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    
 }
 
-# ============================================================================
-# SIMPLE JWT CONFIGURATION
-# ============================================================================
+# =============================================================================
+# SIMPLE JWT
+# =============================================================================
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "UPDATE_LAST_LOGIN": True,
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=int(os.getenv("JWT_ACCESS_MINUTES", 60))
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", 7))),
+    "ROTATE_REFRESH_TOKENS": os.getenv("JWT_ROTATE_REFRESH_TOKENS") == "True",
+    "BLACKLIST_AFTER_ROTATION": os.getenv("JWT_BLACKLIST_AFTER_ROTATION") == "True",
+    "UPDATE_LAST_LOGIN": os.getenv("JWT_UPDATE_LAST_LOGIN") == "True",
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
-    "VERIFYING_KEY": None,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "TOKEN_TYPE_CLAIM": "token_type",
 }
 
-# ============================================================================
-# LOGURU LOGGING CONFIGURATION
-# ============================================================================
+# =============================================================================
+# LOGURU LOGGING
+# =============================================================================
 
-from loguru import logger
-
-# Disable Django's default logging
 LOGGING_CONFIG = None
 
-# Create logs directory
 LOGS_DIR = BASE_DIR / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
-# Remove default loguru handler
 logger.remove()
 
-# ============================================================================
-# LOGURU HANDLERS
-# ============================================================================
-
-# Handler 1: DEBUG, INFO, WARNING -> debug.log (file only)
 logger.add(
     LOGS_DIR / "debug.log",
     level="DEBUG",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
     rotation="10 MB",
     retention="30 days",
     compression="zip",
-    filter=lambda record: record["level"].name in ["DEBUG", "INFO", "WARNING"],
-    enqueue=False,  # Set to False to avoid pickle errors
-    backtrace=False,
-    diagnose=False,
+    filter=lambda r: r["level"].name in ["DEBUG", "INFO", "WARNING"],
 )
 
-# Handler 2: ERROR, CRITICAL -> error.log (file only)
 logger.add(
     LOGS_DIR / "error.log",
     level="ERROR",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}\n{exception}",
     rotation="10 MB",
     retention="30 days",
     compression="zip",
-    enqueue=False,  # Set to False to avoid pickle errors
     backtrace=True,
     diagnose=True,
 )
 
-# Handler 3: Console handler - Only DEBUG, INFO, WARNING (NO CRITICAL/ERROR)
 if DEBUG:
     logger.add(
         sys.stderr,
         level="DEBUG",
-        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
+        format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}",
+        filter=lambda r: r["level"].name in ["DEBUG", "INFO", "WARNING"],
         colorize=True,
-        filter=lambda record: record["level"].name in ["DEBUG", "INFO", "WARNING"],
     )
 
-# ============================================================================
-# DJANGO LOGGING INTEGRATION (Optional - for Django internal logs)
-# ============================================================================
+# =============================================================================
+# DJANGO LOGGING BRIDGE
+# =============================================================================
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "level": "INFO",
-        },
+        "console": {"class": "logging.StreamHandler", "level": "INFO"},
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
+    "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
+# =============================================================================
+# SPECTACULAR
+# =============================================================================
+
 SPECTACULAR_SETTINGS = {
-    "TITLE": "EcoLoop API",
-    "DESCRIPTION": "API documentation for EcoLoop backend",
-    "VERSION": "1.0.0",
-    # Optional (recommended if you use JWT auth)
-    "SERVE_INCLUDE_SCHEMA": False,
-    "COMPONENT_SPLIT_REQUEST": True,
+    "TITLE": os.getenv("SPECTACULAR_TITLE"),
+    "DESCRIPTION": os.getenv("SPECTACULAR_DESCRIPTION"),
+    "VERSION": os.getenv("SPECTACULAR_VERSION"),
+    "SERVE_INCLUDE_SCHEMA": os.getenv("SPECTACULAR_SERVE_INCLUDE_SCHEMA") == "True",
+    "COMPONENT_SPLIT_REQUEST": os.getenv("SPECTACULAR_COMPONENT_SPLIT_REQUEST")
+    == "True",
 }
+
+# =============================================================================
+# EMAIL SETTINGS
+# =============================================================================
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

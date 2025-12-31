@@ -1,18 +1,15 @@
-"""
-Comprehensive test script to verify Loguru logging is working correctly
-Location: test.py (in project root)
-Run with: python test.py
-"""
-
 import os
 import django
 
-# Set up Django environment
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ecoLoop.settings")
+# Set up Django settings BEFORE any Django imports
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE", "ecoLoop.settings"
+)  # Replace 'ecoLoop.settings' with your actual settings module path
 django.setup()
 
-from loguru import logger
-import time
+# Now you can import your email functions
+from ecoLoop.mail import send_email, send_login_otp
 
-
-logger.critical("hi")
+# Test the email
+send_email("nparyan7@gmail.com", "Test Subject", "This is a test message.")
+print("Email sent successfully!")
