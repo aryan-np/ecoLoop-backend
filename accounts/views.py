@@ -75,54 +75,33 @@ class UserRegistrationView(APIView):
 
 
 class UserLoginView(APIView):
-    """
-    API view for user login with JWT token generation.
-    Accepts email and password, returns user data and JWT tokens.
-    """
-
     permission_classes = [AllowAny]
 
     @extend_schema(
         tags=["Auth"],
         summary="Login user",
-        description="Login using email and password. Returns user data and JWT access/refresh tokens.",
+        description="Login using PASSWORD or OTP method. OTP method sends OTP first; tokens are returned after OTP verify.",
         request=UserLoginSerializer,
         responses={
-            200: OpenApiResponse(description="Login successful."),
+            200: OpenApiResponse(description="OTP sent or login successful."),
             400: OpenApiResponse(description="Validation error."),
             401: OpenApiResponse(description="Invalid credentials."),
             500: OpenApiResponse(description="Server error."),
         },
-        examples=[
-            OpenApiExample(
-                "Login example",
-                value={"email": "user@example.com", "password": "StrongPass@123"},
-                request_only=True,
-            ),
-        ],
     )
     def post(self, request, *args, **kwargs):
         serializer = UserLoginSerializer(data=request.data)
 
         try:
             if serializer.is_valid():
-                user = serializer.user
-                refresh_token = RefreshToken.for_user(user)
-                access_token = str(refresh_token.access_token)
-
+                result = serializer.save()  # <-- IMPORTANT
                 return api_response(
                     is_success=True,
-                    result={
-                        "message": "User logged in successfully.",
-                        "user_data": UserSerializer(user).data,
-                        "tokens": {
-                            "access": access_token,
-                            "refresh": str(refresh_token),
-                        },
-                    },
+                    result=result,
                     status_code=status.HTTP_200_OK,
                 )
 
+            # invalid credentials handling (optional)
             if "message" in serializer.errors and "Invalid credentials." in str(
                 serializer.errors.get("message", "")
             ):
