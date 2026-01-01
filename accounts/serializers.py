@@ -237,6 +237,8 @@ class OTPVerifySerializer(serializers.Serializer):
 
     def validate(self, data):
         purpose = data["purpose"]
+        email = data["email"]
+        otp = data["otp"]
 
         if purpose == "RESET_PASSWORD":
             new_password = data.get("new_password")
@@ -266,6 +268,10 @@ class OTPVerifySerializer(serializers.Serializer):
                         "registration_id": "registration_id is required for REGISTER verification."
                     }
                 )
+
+        # Verify OTP here (before create is called)
+        otp_obj = self._get_latest_active_otp(email=email, purpose=purpose)
+        self._verify_common(otp_obj=otp_obj, otp=otp)
 
         return data
 
@@ -301,10 +307,9 @@ class OTPVerifySerializer(serializers.Serializer):
     def create(self, validated_data):
         email = validated_data["email"]
         purpose = validated_data["purpose"]
-        otp = validated_data["otp"]
 
+        # OTP already verified in validate(), get it again to process the result
         otp_obj = self._get_latest_active_otp(email=email, purpose=purpose)
-        self._verify_common(otp_obj=otp_obj, otp=otp)
 
         # =========================
         # REGISTER: create user from pending
@@ -331,19 +336,14 @@ class OTPVerifySerializer(serializers.Serializer):
                 )
 
             with transaction.atomic():
-                if User.objects.filter(email=email).exists():
-                    pending.is_used = True
-                    pending.save(update_fields=["is_used"])
-                    raise serializers.ValidationError({"email": "User already exists."})
-
-                user = User.objects.create(
+                user = User.objects.create_user(
                     email=pending.email,
                     full_name=pending.full_name,
                     phone_number=pending.phone_number,
-                    password=pending.password_hash,  # already hashed
-                    is_email_verified=True,
+                    password=pending.password_hash,  # This is already hashed
                 )
-
+                user.is_email_verified = True
+                user.save()
                 pending.is_used = True
                 pending.save(update_fields=["is_used"])
 
@@ -391,11 +391,9 @@ class OTPVerifySerializer(serializers.Serializer):
 
             new_password = validated_data["new_password"]
             user.set_password(new_password)
-            user.save(update_fields=["password"])
+            user.save()
 
-            return {
-                "message": "Password reset successful. You can now login with your new password."
-            }
+            return {"message": "Password reset successfully."}
 
         return {"message": "OTP verified successfully."}
 

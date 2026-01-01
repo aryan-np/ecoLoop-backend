@@ -347,7 +347,7 @@ class OTPVerifyView(APIView):
 
             return api_response(
                 is_success=False,
-                error_message=serializer.errors,
+                error_message="invalid otp",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:

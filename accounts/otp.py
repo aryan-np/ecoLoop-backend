@@ -4,7 +4,9 @@ from django.contrib.auth.hashers import make_password, check_password
 
 def generate_otp(length=6):
     # numeric OTP
-    return "".join(str(secrets.randbelow(10)) for _ in range(length))
+    otp = "".join(str(secrets.randbelow(10)) for _ in range(length))
+    print(otp)
+    return otp
 
 
 def hash_otp(otp: str) -> str:

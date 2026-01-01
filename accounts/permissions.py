@@ -7,3 +7,11 @@ class IsOwnerOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
         return getattr(obj, "user_id", None) == getattr(request.user, "id", None)
+
+
+class IsOwnerOrReadOnlyProduct(BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        return getattr(obj, "owner_id", None) == getattr(request.user, "id", None)
