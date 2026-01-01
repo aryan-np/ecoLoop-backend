@@ -1,4 +1,0 @@
-2025-12-31 23:50:58.393 | CRITICAL | accounts.views:post:69 - Error during user registration: "Got KeyError when attempting to get a value for field `full_name` on serializer `UserSerializer`.\nThe serializer field might be named incorrectly and not match any attribute or key on the `dict` instance.\nOriginal exception text was: 'full_name'."
-2025-12-31 23:55:20.276 | CRITICAL | accounts.views:post:69 - Error during user registration: UNIQUE constraint failed: accounts_pendingregistration.email
-2025-12-31 23:55:29.310 | CRITICAL | accounts.views:post:69 - Error during user registration: UNIQUE constraint failed: accounts_pendingregistration.email
-2026-01-01 00:05:29.790 | CRITICAL | accounts.views:post:69 - Error during user registration: 'dict' object has no attribute 'data'

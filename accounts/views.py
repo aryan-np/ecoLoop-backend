@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 from loguru import logger
 
@@ -242,10 +243,11 @@ class RefreshTokenView(APIView):
 
 @extend_schema(tags=["User Profile"])
 class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = UserProfile.objects.select_related("user").all()
+    queryset = UserProfile.objects.select_related("user").all().order_by("-created_at")
     serializer_class = UserProfileSerializer
     permission_classes = [IsOwnerOrReadOnly]
     authentication_classes = [JWTAuthentication]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     @extend_schema(
         summary="List profiles",
@@ -309,7 +311,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = UserProfile.objects.select_related("user")
+        qs = UserProfile.objects.select_related("user").order_by("-created_at")
         if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
             return qs.all()
         return qs.filter(user=user)

@@ -420,9 +420,10 @@ class LogoutSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source="user.email", read_only=True)
-    full_name = serializers.CharField(source="user.full_name", read_only=True)
+    email = serializers.EmailField(source="user.email")
+    full_name = serializers.CharField(source="user.full_name")
     phone_number = serializers.CharField(source="user.phone_number", read_only=True)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = UserProfile
@@ -431,9 +432,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "email",
             "full_name",
             "phone_number",
-            # "profile_picture",
-            "address_line1",
-            "address_line2",
+            "profile_picture",
             "city",
             "area",
             "postal_code",
@@ -443,4 +442,23 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at", "latitude", "longitude"]
+
+    def update(self, instance, validated_data):
+        # Handle nested user fields
+        user_data = {}
+        if "user" in validated_data:
+            user_data = validated_data.pop("user")
+
+        # Update User model fields
+        user = instance.user
+        for attr, value in user_data.items():
+            setattr(user, attr, value)
+        user.save()
+
+        # Update UserProfile fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return instance

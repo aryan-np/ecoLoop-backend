@@ -16,8 +16,8 @@ class Product(models.Model):
     condition = models.CharField(
         max_length=50,
         choices=[
-            ("new", "New"),
-            ("used", "Used"),
+            ("like new", "Like New"),
+            ("fair", "Fair"),
             ("damaged", "Damaged"),
         ],
     )
@@ -25,7 +25,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     is_free = models.BooleanField(default=False)
 
-    # image = models.ImageField(upload_to="products/", blank=True, null=True)
+    image = models.ImageField(upload_to="products/", blank=True, null=True)
 
     is_active = models.BooleanField(default=True)
 

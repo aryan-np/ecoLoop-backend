@@ -55,7 +55,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # public view of active products (change if you want owner-only listing)
-        return Product.objects.filter(is_active=True)
+        return Product.objects.filter(is_active=True).order_by("-created_at")
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
