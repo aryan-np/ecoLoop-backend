@@ -86,6 +86,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
     lookup_field = "id"
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProductStatusFilter
 
     def get_queryset(self):
         # Only return products with type "sell" (status filter applied separately)

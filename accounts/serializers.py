@@ -164,7 +164,7 @@ class UserLoginSerializer(serializers.Serializer):
             password = data.get("password")
             if not password:
                 raise serializers.ValidationError(
-                    {"password": "This field is required for PASSWORD login."}
+                    {"password": "This field is required for login."}
                 )
             if not user.check_password(password):
                 raise serializers.ValidationError({"message": "Invalid credentials."})
