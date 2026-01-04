@@ -229,16 +229,24 @@ class OTPVerifySerializer(serializers.Serializer):
     otp = serializers.CharField(min_length=4, max_length=10)
 
     # only for RESET_PASSWORD
-    new_password = serializers.CharField(write_only=True, required=False)
-    confirm_new_password = serializers.CharField(write_only=True, required=False)
+    new_password = serializers.CharField(
+        write_only=True, required=False, allow_blank=True
+    )
+    confirm_new_password = serializers.CharField(
+        write_only=True, required=False, allow_blank=True
+    )
 
     # only for REGISTER (to find pending registration)
-    registration_id = serializers.UUIDField(required=False)
+    registration_id = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, data):
         purpose = data["purpose"]
         email = data["email"]
         otp = data["otp"]
+
+        # Ignore registration_id if purpose is LOGIN
+        if purpose == "LOGIN":
+            data.pop("registration_id", None)
 
         if purpose == "RESET_PASSWORD":
             new_password = data.get("new_password")
@@ -262,11 +270,22 @@ class OTPVerifySerializer(serializers.Serializer):
                 raise serializers.ValidationError({"new_password": e.messages})
 
         if purpose == "REGISTER":
-            if not data.get("registration_id"):
+            registration_id = data.get("registration_id", "").strip()
+            if not registration_id:
                 raise serializers.ValidationError(
                     {
                         "registration_id": "registration_id is required for REGISTER verification."
                     }
+                )
+            # Validate UUID format
+            try:
+                import uuid
+
+                uuid.UUID(registration_id)
+                data["registration_id"] = registration_id
+            except ValueError:
+                raise serializers.ValidationError(
+                    {"registration_id": "Invalid registration_id format."}
                 )
 
         # Verify OTP here (before create is called)

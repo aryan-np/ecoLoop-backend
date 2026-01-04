@@ -1,2 +1,1170 @@
-2026-01-01 21:34:33.511 | CRITICAL | accounts.views:post:70 - Error during user registration: UNIQUE constraint failed: accounts_pendingregistration.email
-2026-01-01 21:35:04.712 | CRITICAL | accounts.views:post:70 - Error during user registration: UNIQUE constraint failed: accounts_pendingregistration.email
+2026-01-04 13:04:39.319 | ERROR    | communications.views:create:122 - Error creating thread for user 32178bb8-8595-4cfe-b874-6cd9323d30bf: Field.__init__() got an unexpected keyword argument 'raise_exception'
+Traceback (most recent call last):
+
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+    │    └ <function Thread._bootstrap_inner at 0x000002C0AE2C3920>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 24216)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+    │    └ <function Thread.run at 0x000002C0AE2C3600>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 24216)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {}
+    │    │        │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 24216)>
+    │    │        │    └ (<socket.socket fd=1516, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61809)>, ('127.0.0.1', 618...
+    │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 24216)>
+    │    └ <bound method ThreadingMixIn.process_request_thread of <django.core.servers.basehttp.WSGIServer object at 0x000002C0B351D340>>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 24216)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+    │    │              │        └ ('127.0.0.1', 61809)
+    │    │              └ <socket.socket fd=1516, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61809)>
+    │    └ <function BaseServer.finish_request at 0x000002C0B16A8EA0>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000002C0B351D340>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    │    │                   │        │               └ <django.core.servers.basehttp.WSGIServer object at 0x000002C0B351D340>
+    │    │                   │        └ ('127.0.0.1', 61809)
+    │    │                   └ <socket.socket fd=1516, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61809)>
+    │    └ <class 'django.core.servers.basehttp.WSGIRequestHandler'>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000002C0B351D340>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 761, in __init__
+    self.handle()
+    │    └ <function WSGIRequestHandler.handle at 0x000002C0B1D3B740>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000002C0B3A3D160>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 223, in handle
+    self.handle_one_request()
+    │    └ <function WSGIRequestHandler.handle_one_request at 0x000002C0B1D3B7E0>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000002C0B3A3D160>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 248, in handle_one_request
+    handler.run(self.server.get_app())
+    │       │   │    │      └ <function WSGIServer.get_app at 0x000002C0B1D3A7A0>
+    │       │   │    └ <django.core.servers.basehttp.WSGIServer object at 0x000002C0B351D340>
+    │       │   └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000002C0B3A3D160>
+    │       └ <function BaseHandler.run at 0x000002C0B1D2A7A0>
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000002C0B35F3F80>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\wsgiref\handlers.py", line 137, in run
+    self.result = application(self.environ, self.start_response)
+    │    │        │           │    │        │    └ <function BaseHandler.start_response at 0x000002C0B1D2AB60>
+    │    │        │           │    │        └ <django.core.servers.basehttp.ServerHandler object at 0x000002C0B35F3F80>
+    │    │        │           │    └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+    │    │        │           └ <django.core.servers.basehttp.ServerHandler object at 0x000002C0B35F3F80>
+    │    │        └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000002C0B1E02930>
+    │    └ None
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000002C0B35F3F80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\contrib\staticfiles\handlers.py", line 80, in __call__
+    return self.application(environ, start_response)
+           │    │           │        └ <bound method BaseHandler.start_response of <django.core.servers.basehttp.ServerHandler object at 0x000002C0B35F3F80>>
+           │    │           └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+           │    └ <django.core.handlers.wsgi.WSGIHandler object at 0x000002C0B21FBC80>
+           └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000002C0B1E02930>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\wsgi.py", line 124, in __call__
+    response = self.get_response(request)
+               │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function BaseHandler.get_response at 0x000002C0B1BADF80>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000002C0B21FBC80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 141, in get_response
+    response = self._middleware_chain(request)
+               │    │                 └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B3552AC0>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000002C0B21FBC80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B3552A20>
+               │           └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <corsheaders.middleware.CorsMiddleware object at 0x000002C0B2520530>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\corsheaders\middleware.py", line 53, in __call__
+    result = self.get_response(request)
+             │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+             │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B3552660>
+             └ <corsheaders.middleware.CorsMiddleware object at 0x000002C0B2520530>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B35525C0>
+               │           └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B3552520>
+               │           └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B3552480>
+               │           └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B35523E0>
+               │           └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000002C0B3552340>
+               │           └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function BaseHandler._get_response at 0x000002C0B35522A0>
+               │           └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <bound method BaseHandler._get_response of <django.core.handlers.wsgi.WSGIHandler object at 0x000002C0B21FBC80>>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               │                │         │                └ {}
+               │                │         └ ()
+               │                └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <function ThreadViewSet at 0x000002C0B23FEE80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           │         │         │       └ {}
+           │         │         └ ()
+           │         └ <WSGIRequest: POST '/api/communications/threads/'>
+           └ <function ThreadViewSet at 0x000002C0B23FECA0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           │    │        │         │       └ {}
+           │    │        │         └ ()
+           │    │        └ <WSGIRequest: POST '/api/communications/threads/'>
+           │    └ <function APIView.dispatch at 0x000002C0B2228360>
+           └ <communications.views.ThreadViewSet object at 0x000002C0B35F3950>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               │       │         │       └ {}
+               │       │         └ ()
+               │       └ <rest_framework.request.Request: POST '/api/communications/threads/'>
+               └ <bound method ThreadViewSet.create of <communications.views.ThreadViewSet object at 0x000002C0B35F3950>>
+
+> File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\communications\views.py", line 114, in create
+    serializer = self.get_serializer(thread, raise_exception=True)
+                 │    │              └ <Thread: Thread between nparyan7@gmail.com and admin@gmail.com>
+                 │    └ <function GenericAPIView.get_serializer at 0x000002C0B22479C0>
+                 └ <communications.views.ThreadViewSet object at 0x000002C0B35F3950>
+
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\generics.py", line 114, in get_serializer
+    return serializer_class(*args, **kwargs)
+           │                 │       └ {'raise_exception': True, 'context': {'request': <rest_framework.request.Request: POST '/api/communications/threads/'>, 'form...
+           │                 └ (<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>,)
+           └ <class 'communications.serializers.ThreadSerializer'>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\serializers.py", line 121, in __init__
+    super().__init__(**kwargs)
+                       └ {'raise_exception': True}
+
+TypeError: Field.__init__() got an unexpected keyword argument 'raise_exception'
+2026-01-04 13:06:12.903 | ERROR    | communications.views:create:129 - Error creating thread for user 32178bb8-8595-4cfe-b874-6cd9323d30bf: ['“692f860d” is not a valid UUID.']
+Traceback (most recent call last):
+
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\__init__.py", line 2766, in to_python
+    return uuid.UUID(**{input_form: value})
+           │    │       │           └ '692f860d'
+           │    │       └ 'hex'
+           │    └ <class 'uuid.UUID'>
+           └ <module 'uuid' from 'C:\\Users\\npary\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\uuid.py'>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\uuid.py", line 178, in __init__
+    raise ValueError('badly formed hexadecimal UUID string')
+
+ValueError: badly formed hexadecimal UUID string
+
+
+During handling of the above exception, another exception occurred:
+
+
+Traceback (most recent call last):
+
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+    │    └ <function Thread._bootstrap_inner at 0x00000242E88E3920>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 29204)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+    │    └ <function Thread.run at 0x00000242E88E3600>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 29204)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {}
+    │    │        │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 29204)>
+    │    │        │    └ (<socket.socket fd=1372, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61539)>, ('127.0.0.1', 615...
+    │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 29204)>
+    │    └ <bound method ThreadingMixIn.process_request_thread of <django.core.servers.basehttp.WSGIServer object at 0x00000242EDB7D5E0>>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 29204)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+    │    │              │        └ ('127.0.0.1', 61539)
+    │    │              └ <socket.socket fd=1372, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61539)>
+    │    └ <function BaseServer.finish_request at 0x00000242EBCF8EA0>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x00000242EDB7D5E0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    │    │                   │        │               └ <django.core.servers.basehttp.WSGIServer object at 0x00000242EDB7D5E0>
+    │    │                   │        └ ('127.0.0.1', 61539)
+    │    │                   └ <socket.socket fd=1372, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61539)>
+    │    └ <class 'django.core.servers.basehttp.WSGIRequestHandler'>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x00000242EDB7D5E0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 761, in __init__
+    self.handle()
+    │    └ <function WSGIRequestHandler.handle at 0x00000242EC39B740>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x00000242EE104A70>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 221, in handle
+    self.handle_one_request()
+    │    └ <function WSGIRequestHandler.handle_one_request at 0x00000242EC39B7E0>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x00000242EE104A70>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 248, in handle_one_request
+    handler.run(self.server.get_app())
+    │       │   │    │      └ <function WSGIServer.get_app at 0x00000242EC39A7A0>
+    │       │   │    └ <django.core.servers.basehttp.WSGIServer object at 0x00000242EDB7D5E0>
+    │       │   └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x00000242EE104A70>
+    │       └ <function BaseHandler.run at 0x00000242EC38A7A0>
+    └ <django.core.servers.basehttp.ServerHandler object at 0x00000242EE105520>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\wsgiref\handlers.py", line 137, in run
+    self.result = application(self.environ, self.start_response)
+    │    │        │           │    │        │    └ <function BaseHandler.start_response at 0x00000242EC38AB60>
+    │    │        │           │    │        └ <django.core.servers.basehttp.ServerHandler object at 0x00000242EE105520>
+    │    │        │           │    └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+    │    │        │           └ <django.core.servers.basehttp.ServerHandler object at 0x00000242EE105520>
+    │    │        └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x00000242EC462780>
+    │    └ None
+    └ <django.core.servers.basehttp.ServerHandler object at 0x00000242EE105520>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\contrib\staticfiles\handlers.py", line 80, in __call__
+    return self.application(environ, start_response)
+           │    │           │        └ <bound method BaseHandler.start_response of <django.core.servers.basehttp.ServerHandler object at 0x00000242EE105520>>
+           │    │           └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+           │    └ <django.core.handlers.wsgi.WSGIHandler object at 0x00000242EDBAB7D0>
+           └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x00000242EC462780>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\wsgi.py", line 124, in __call__
+    response = self.get_response(request)
+               │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function BaseHandler.get_response at 0x00000242EC20DF80>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x00000242EDBAB7D0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 141, in get_response
+    response = self._middleware_chain(request)
+               │    │                 └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC05E40>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x00000242EDBAB7D0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC05DA0>
+               │           └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <corsheaders.middleware.CorsMiddleware object at 0x00000242EDBE8DA0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\corsheaders\middleware.py", line 53, in __call__
+    result = self.get_response(request)
+             │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+             │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC059E0>
+             └ <corsheaders.middleware.CorsMiddleware object at 0x00000242EDBE8DA0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC05940>
+               │           └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC058A0>
+               │           └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC05800>
+               │           └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC05760>
+               │           └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x00000242EDC056C0>
+               │           └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function BaseHandler._get_response at 0x00000242EDC05620>
+               │           └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <bound method BaseHandler._get_response of <django.core.handlers.wsgi.WSGIHandler object at 0x00000242EDBAB7D0>>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               │                │         │                └ {}
+               │                │         └ ()
+               │                └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <function ThreadViewSet at 0x00000242ECAAEE80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           │         │         │       └ {}
+           │         │         └ ()
+           │         └ <WSGIRequest: POST '/api/communications/threads/'>
+           └ <function ThreadViewSet at 0x00000242ECAAECA0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           │    │        │         │       └ {}
+           │    │        │         └ ()
+           │    │        └ <WSGIRequest: POST '/api/communications/threads/'>
+           │    └ <function APIView.dispatch at 0x00000242EC8E6F20>
+           └ <communications.views.ThreadViewSet object at 0x00000242EE106930>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               │       │         │       └ {}
+               │       │         └ ()
+               │       └ <rest_framework.request.Request: POST '/api/communications/threads/'>
+               └ <bound method ThreadViewSet.create of <communications.views.ThreadViewSet object at 0x00000242EE106930>>
+
+> File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\communications\views.py", line 116, in create
+    thread, created = Thread.objects.get_or_create(
+                      │      └ <django.db.models.manager.ManagerDescriptor object at 0x00000242EC3D3F20>
+                      └ <class 'communications.models.Thread'>
+
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+                   │    │               │      │       └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+                   │    │               │      └ ()
+                   │    │               └ 'get_or_create'
+                   │    └ <function BaseManager.get_queryset at 0x00000242EBC2F9C0>
+                   └ <django.db.models.manager.Manager object at 0x00000242EDB0DA00>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 987, in get_or_create
+    return self.get(**kwargs), False
+           │    │     └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+           │    └ <function QuerySet.get at 0x00000242EBBE6700>
+           └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 625, in get
+    clone = self._chain() if self.query.combinator else self.filter(*args, **kwargs)
+            │    │           │    │                     │    │       │       └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+            │    │           │    │                     │    │       └ ()
+            │    │           │    │                     │    └ <function QuerySet.filter at 0x00000242EBC2C540>
+            │    │           │    │                     └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+            │    │           │    └ <property object at 0x00000242EBBFEA70>
+            │    │           └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+            │    └ <function QuerySet._chain at 0x00000242EBC2D580>
+            └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 1542, in filter
+    return self._filter_or_exclude(False, args, kwargs)
+           │    │                         │     └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+           │    │                         └ ()
+           │    └ <function QuerySet._filter_or_exclude at 0x00000242EBC2C680>
+           └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 1560, in _filter_or_exclude
+    clone._filter_or_exclude_inplace(negate, args, kwargs)
+    │     │                          │       │     └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+    │     │                          │       └ ()
+    │     │                          └ False
+    │     └ <function QuerySet._filter_or_exclude_inplace at 0x00000242EBC2C720>
+    └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 1570, in _filter_or_exclude_inplace
+    self._query.add_q(Q(*args, **kwargs))
+    │    │      │     │  │       └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+    │    │      │     │  └ ()
+    │    │      │     └ <class 'django.db.models.query_utils.Q'>
+    │    │      └ <function Query.add_q at 0x00000242EBB9D260>
+    │    └ <django.db.models.sql.query.Query object at 0x00000242EE105C70>
+    └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1671, in add_q
+    clause, _ = self._add_q(q_object, can_reuse)
+                │    │      │         └ {'communications_thread'}
+                │    │      └ <Q: (AND: ('user1_id', '32178bb8-8595-4cfe-b874-6cd9323d30bf'), ('user2_id', '692f860d'))>
+                │    └ <function Query._add_q at 0x00000242EBB9D440>
+                └ <django.db.models.sql.query.Query object at 0x00000242EE105C70>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1703, in _add_q
+    child_clause, needed_inner = self.build_filter(
+    │                            │    └ <function Query.build_filter at 0x00000242EBB9D120>
+    │                            └ <django.db.models.sql.query.Query object at 0x00000242EE105C70>
+    └ <WhereNode: (AND: RelatedExact(Col(communications_thread, communications.Thread.user1), UUID('32178bb8-8595-4cfe-b874-6cd9323...
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1613, in build_filter
+    condition = self.build_lookup(lookups, col, value)
+                │    │            │        │    └ '692f860d'
+                │    │            │        └ Col(communications_thread, communications.Thread.user2)
+                │    │            └ []
+                │    └ <function Query.build_lookup at 0x00000242EBB9CFE0>
+                └ <django.db.models.sql.query.Query object at 0x00000242EE105C70>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1440, in build_lookup
+    lookup = lookup_class(lhs, rhs)
+             │            │    └ '692f860d'
+             │            └ Col(communications_thread, communications.Thread.user2)
+             └ <class 'django.db.models.fields.related_lookups.RelatedExact'>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\lookups.py", line 35, in __init__
+    self.rhs = self.get_prep_lookup()
+    │    │     │    └ <function RelatedLookupMixin.get_prep_lookup at 0x00000242EBC71A80>
+    │    │     └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+    │    └ '692f860d'
+    └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\related_lookups.py", line 113, in get_prep_lookup
+    self.rhs = target_field.get_prep_value(self.rhs)
+    │    │     │            │              │    └ '692f860d'
+    │    │     │            │              └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+    │    │     │            └ <function UUIDField.get_prep_value at 0x00000242EB2E25C0>
+    │    │     └ <django.db.models.fields.UUIDField: id>
+    │    └ '692f860d'
+    └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\__init__.py", line 2750, in get_prep_value
+    return self.to_python(value)
+           │    │         └ '692f860d'
+           │    └ <function UUIDField.to_python at 0x00000242EB2E2700>
+           └ <django.db.models.fields.UUIDField: id>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\__init__.py", line 2768, in to_python
+    raise exceptions.ValidationError(
+          │          └ <class 'django.core.exceptions.ValidationError'>
+          └ <module 'django.core.exceptions' from 'C:\\Users\\npary\\OneDrive\\Desktop\\Stuff\\Fyp\\ecoLoop-backend\\.venv\\Lib\\site-pac...
+
+django.core.exceptions.ValidationError: ['“692f860d” is not a valid UUID.']
+2026-01-04 13:07:28.170 | ERROR    | communications.views:create:136 - Error creating thread for user 32178bb8-8595-4cfe-b874-6cd9323d30bf: ['“692f860d” is not a valid UUID.']
+Traceback (most recent call last):
+
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\__init__.py", line 2766, in to_python
+    return uuid.UUID(**{input_form: value})
+           │    │       │           └ '692f860d'
+           │    │       └ 'hex'
+           │    └ <class 'uuid.UUID'>
+           └ <module 'uuid' from 'C:\\Users\\npary\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\uuid.py'>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\uuid.py", line 178, in __init__
+    raise ValueError('badly formed hexadecimal UUID string')
+
+ValueError: badly formed hexadecimal UUID string
+
+
+During handling of the above exception, another exception occurred:
+
+
+Traceback (most recent call last):
+
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+    │    └ <function Thread._bootstrap_inner at 0x000001B9A0D33920>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+    │    └ <function Thread.run at 0x000001B9A0D33600>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {}
+    │    │        │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+    │    │        │    └ (<socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>, ('127.0.0.1', 615...
+    │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+    │    └ <bound method ThreadingMixIn.process_request_thread of <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+    │    │              │        └ ('127.0.0.1', 61561)
+    │    │              └ <socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>
+    │    └ <function BaseServer.finish_request at 0x000001B9A3E98EA0>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    │    │                   │        │               └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+    │    │                   │        └ ('127.0.0.1', 61561)
+    │    │                   └ <socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>
+    │    └ <class 'django.core.servers.basehttp.WSGIRequestHandler'>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 761, in __init__
+    self.handle()
+    │    └ <function WSGIRequestHandler.handle at 0x000001B9A452B740>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 221, in handle
+    self.handle_one_request()
+    │    └ <function WSGIRequestHandler.handle_one_request at 0x000001B9A452B7E0>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 248, in handle_one_request
+    handler.run(self.server.get_app())
+    │       │   │    │      └ <function WSGIServer.get_app at 0x000001B9A452A7A0>
+    │       │   │    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+    │       │   └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+    │       └ <function BaseHandler.run at 0x000001B9A451A7A0>
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF60>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\wsgiref\handlers.py", line 137, in run
+    self.result = application(self.environ, self.start_response)
+    │    │        │           │    │        │    └ <function BaseHandler.start_response at 0x000001B9A451AB60>
+    │    │        │           │    │        └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF60>
+    │    │        │           │    └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+    │    │        │           └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF60>
+    │    │        └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000001B9A5D0D010>
+    │    └ None
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF60>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\contrib\staticfiles\handlers.py", line 80, in __call__
+    return self.application(environ, start_response)
+           │    │           │        └ <bound method BaseHandler.start_response of <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF60>>
+           │    │           └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+           │    └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+           └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000001B9A5D0D010>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\wsgi.py", line 124, in __call__
+    response = self.get_response(request)
+               │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function BaseHandler.get_response at 0x000001B9A439DF80>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 141, in get_response
+    response = self._middleware_chain(request)
+               │    │                 └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9ADE0>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9AD40>
+               │           └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <corsheaders.middleware.CorsMiddleware object at 0x000001B9A5D0FBF0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\corsheaders\middleware.py", line 53, in __call__
+    result = self.get_response(request)
+             │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+             │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A980>
+             └ <corsheaders.middleware.CorsMiddleware object at 0x000001B9A5D0FBF0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A8E0>
+               │           └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A840>
+               │           └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A7A0>
+               │           └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A700>
+               │           └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A660>
+               │           └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function BaseHandler._get_response at 0x000001B9A5D9A5C0>
+               │           └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <bound method BaseHandler._get_response of <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               │                │         │                └ {}
+               │                │         └ ()
+               │                └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <function ThreadViewSet at 0x000001B9A4C3EE80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           │         │         │       └ {}
+           │         │         └ ()
+           │         └ <WSGIRequest: POST '/api/communications/threads/'>
+           └ <function ThreadViewSet at 0x000001B9A4C3ECA0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           │    │        │         │       └ {}
+           │    │        │         └ ()
+           │    │        └ <WSGIRequest: POST '/api/communications/threads/'>
+           │    └ <function APIView.dispatch at 0x000001B9A4A5F560>
+           └ <communications.views.ThreadViewSet object at 0x000001B9A628D880>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               │       │         │       └ {}
+               │       │         └ ()
+               │       └ <rest_framework.request.Request: POST '/api/communications/threads/'>
+               └ <bound method ThreadViewSet.create of <communications.views.ThreadViewSet object at 0x000001B9A628D880>>
+
+> File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\communications\views.py", line 116, in create
+    thread, created = Thread.objects.get_or_create(
+                      │      └ <django.db.models.manager.ManagerDescriptor object at 0x000001B9A4563F20>
+                      └ <class 'communications.models.Thread'>
+
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+                   │    │               │      │       └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+                   │    │               │      └ ()
+                   │    │               └ 'get_or_create'
+                   │    └ <function BaseManager.get_queryset at 0x000001B9A3DCF9C0>
+                   └ <django.db.models.manager.Manager object at 0x000001B9A5C9DB20>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 987, in get_or_create
+    return self.get(**kwargs), False
+           │    │     └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+           │    └ <function QuerySet.get at 0x000001B9A3D86700>
+           └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 625, in get
+    clone = self._chain() if self.query.combinator else self.filter(*args, **kwargs)
+            │    │           │    │                     │    │       │       └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+            │    │           │    │                     │    │       └ ()
+            │    │           │    │                     │    └ <function QuerySet.filter at 0x000001B9A3DCC540>
+            │    │           │    │                     └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+            │    │           │    └ <property object at 0x000001B9A3D9EA70>
+            │    │           └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+            │    └ <function QuerySet._chain at 0x000001B9A3DCD580>
+            └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 1542, in filter
+    return self._filter_or_exclude(False, args, kwargs)
+           │    │                         │     └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+           │    │                         └ ()
+           │    └ <function QuerySet._filter_or_exclude at 0x000001B9A3DCC680>
+           └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 1560, in _filter_or_exclude
+    clone._filter_or_exclude_inplace(negate, args, kwargs)
+    │     │                          │       │     └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+    │     │                          │       └ ()
+    │     │                          └ False
+    │     └ <function QuerySet._filter_or_exclude_inplace at 0x000001B9A3DCC720>
+    └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\query.py", line 1570, in _filter_or_exclude_inplace
+    self._query.add_q(Q(*args, **kwargs))
+    │    │      │     │  │       └ {'user1_id': '32178bb8-8595-4cfe-b874-6cd9323d30bf', 'user2_id': '692f860d'}
+    │    │      │     │  └ ()
+    │    │      │     └ <class 'django.db.models.query_utils.Q'>
+    │    │      └ <function Query.add_q at 0x000001B9A3D3D260>
+    │    └ <django.db.models.sql.query.Query object at 0x000001B9A628D8B0>
+    └ <QuerySet [<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>]>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1671, in add_q
+    clause, _ = self._add_q(q_object, can_reuse)
+                │    │      │         └ {'communications_thread'}
+                │    │      └ <Q: (AND: ('user1_id', '32178bb8-8595-4cfe-b874-6cd9323d30bf'), ('user2_id', '692f860d'))>
+                │    └ <function Query._add_q at 0x000001B9A3D3D440>
+                └ <django.db.models.sql.query.Query object at 0x000001B9A628D8B0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1703, in _add_q
+    child_clause, needed_inner = self.build_filter(
+    │                            │    └ <function Query.build_filter at 0x000001B9A3D3D120>
+    │                            └ <django.db.models.sql.query.Query object at 0x000001B9A628D8B0>
+    └ <WhereNode: (AND: RelatedExact(Col(communications_thread, communications.Thread.user1), UUID('32178bb8-8595-4cfe-b874-6cd9323...
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1613, in build_filter
+    condition = self.build_lookup(lookups, col, value)
+                │    │            │        │    └ '692f860d'
+                │    │            │        └ Col(communications_thread, communications.Thread.user2)
+                │    │            └ []
+                │    └ <function Query.build_lookup at 0x000001B9A3D3CFE0>
+                └ <django.db.models.sql.query.Query object at 0x000001B9A628D8B0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\sql\query.py", line 1440, in build_lookup
+    lookup = lookup_class(lhs, rhs)
+             │            │    └ '692f860d'
+             │            └ Col(communications_thread, communications.Thread.user2)
+             └ <class 'django.db.models.fields.related_lookups.RelatedExact'>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\lookups.py", line 35, in __init__
+    self.rhs = self.get_prep_lookup()
+    │    │     │    └ <function RelatedLookupMixin.get_prep_lookup at 0x000001B9A3E11A80>
+    │    │     └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+    │    └ '692f860d'
+    └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\related_lookups.py", line 113, in get_prep_lookup
+    self.rhs = target_field.get_prep_value(self.rhs)
+    │    │     │            │              │    └ '692f860d'
+    │    │     │            │              └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+    │    │     │            └ <function UUIDField.get_prep_value at 0x000001B9A34825C0>
+    │    │     └ <django.db.models.fields.UUIDField: id>
+    │    └ '692f860d'
+    └ RelatedExact(Col(communications_thread, communications.Thread.user2), '692f860d')
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\__init__.py", line 2750, in get_prep_value
+    return self.to_python(value)
+           │    │         └ '692f860d'
+           │    └ <function UUIDField.to_python at 0x000001B9A3482700>
+           └ <django.db.models.fields.UUIDField: id>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\db\models\fields\__init__.py", line 2768, in to_python
+    raise exceptions.ValidationError(
+          │          └ <class 'django.core.exceptions.ValidationError'>
+          └ <module 'django.core.exceptions' from 'C:\\Users\\npary\\OneDrive\\Desktop\\Stuff\\Fyp\\ecoLoop-backend\\.venv\\Lib\\site-pac...
+
+django.core.exceptions.ValidationError: ['“692f860d” is not a valid UUID.']
+2026-01-04 13:07:38.012 | ERROR    | communications.views:create:136 - Error creating thread for user 32178bb8-8595-4cfe-b874-6cd9323d30bf: Cannot call `.is_valid()` as no `data=` keyword argument was passed when instantiating the serializer instance.
+Traceback (most recent call last):
+
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+    │    └ <function Thread._bootstrap_inner at 0x000001B9A0D33920>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+    │    └ <function Thread.run at 0x000001B9A0D33600>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {}
+    │    │        │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+    │    │        │    └ (<socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>, ('127.0.0.1', 615...
+    │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+    │    └ <bound method ThreadingMixIn.process_request_thread of <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+    │    │              │        └ ('127.0.0.1', 61561)
+    │    │              └ <socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>
+    │    └ <function BaseServer.finish_request at 0x000001B9A3E98EA0>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    │    │                   │        │               └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+    │    │                   │        └ ('127.0.0.1', 61561)
+    │    │                   └ <socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>
+    │    └ <class 'django.core.servers.basehttp.WSGIRequestHandler'>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 761, in __init__
+    self.handle()
+    │    └ <function WSGIRequestHandler.handle at 0x000001B9A452B740>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 223, in handle
+    self.handle_one_request()
+    │    └ <function WSGIRequestHandler.handle_one_request at 0x000001B9A452B7E0>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 248, in handle_one_request
+    handler.run(self.server.get_app())
+    │       │   │    │      └ <function WSGIServer.get_app at 0x000001B9A452A7A0>
+    │       │   │    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+    │       │   └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+    │       └ <function BaseHandler.run at 0x000001B9A451A7A0>
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF00>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\wsgiref\handlers.py", line 137, in run
+    self.result = application(self.environ, self.start_response)
+    │    │        │           │    │        │    └ <function BaseHandler.start_response at 0x000001B9A451AB60>
+    │    │        │           │    │        └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF00>
+    │    │        │           │    └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+    │    │        │           └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF00>
+    │    │        └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000001B9A5D0D010>
+    │    └ None
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF00>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\contrib\staticfiles\handlers.py", line 80, in __call__
+    return self.application(environ, start_response)
+           │    │           │        └ <bound method BaseHandler.start_response of <django.core.servers.basehttp.ServerHandler object at 0x000001B9A628EF00>>
+           │    │           └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+           │    └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+           └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000001B9A5D0D010>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\wsgi.py", line 124, in __call__
+    response = self.get_response(request)
+               │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function BaseHandler.get_response at 0x000001B9A439DF80>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 141, in get_response
+    response = self._middleware_chain(request)
+               │    │                 └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9ADE0>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9AD40>
+               │           └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <corsheaders.middleware.CorsMiddleware object at 0x000001B9A5D0FBF0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\corsheaders\middleware.py", line 53, in __call__
+    result = self.get_response(request)
+             │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+             │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A980>
+             └ <corsheaders.middleware.CorsMiddleware object at 0x000001B9A5D0FBF0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A8E0>
+               │           └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A840>
+               │           └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A7A0>
+               │           └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A700>
+               │           └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A660>
+               │           └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function BaseHandler._get_response at 0x000001B9A5D9A5C0>
+               │           └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <bound method BaseHandler._get_response of <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               │                │         │                └ {}
+               │                │         └ ()
+               │                └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <function ThreadViewSet at 0x000001B9A4C3EE80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           │         │         │       └ {}
+           │         │         └ ()
+           │         └ <WSGIRequest: POST '/api/communications/threads/'>
+           └ <function ThreadViewSet at 0x000001B9A4C3ECA0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           │    │        │         │       └ {}
+           │    │        │         └ ()
+           │    │        └ <WSGIRequest: POST '/api/communications/threads/'>
+           │    └ <function APIView.dispatch at 0x000001B9A4A5F560>
+           └ <communications.views.ThreadViewSet object at 0x000001B9A64DC770>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               │       │         │       └ {}
+               │       │         └ ()
+               │       └ <rest_framework.request.Request: POST '/api/communications/threads/'>
+               └ <bound method ThreadViewSet.create of <communications.views.ThreadViewSet object at 0x000001B9A64DC770>>
+
+> File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\communications\views.py", line 122, in create
+    if not serializer.is_valid():
+           │          └ <function BaseSerializer.is_valid at 0x000001B9A4962700>
+           └ ThreadSerializer(<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>, context={'request': <rest_framework.request...
+
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\serializers.py", line 218, in is_valid
+    assert hasattr(self, 'initial_data'), (
+                   └ ThreadSerializer(<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>, context={'request': <rest_framework.request...
+
+AssertionError: Cannot call `.is_valid()` as no `data=` keyword argument was passed when instantiating the serializer instance.
+2026-01-04 13:08:23.143 | ERROR    | communications.views:create:136 - Error creating thread for user 32178bb8-8595-4cfe-b874-6cd9323d30bf: Cannot call `.is_valid()` as no `data=` keyword argument was passed when instantiating the serializer instance.
+Traceback (most recent call last):
+
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1030, in _bootstrap
+    self._bootstrap_inner()
+    │    └ <function Thread._bootstrap_inner at 0x000001B9A0D33920>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1073, in _bootstrap_inner
+    self.run()
+    │    └ <function Thread.run at 0x000001B9A0D33600>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1010, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {}
+    │    │        │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+    │    │        │    └ (<socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>, ('127.0.0.1', 615...
+    │    │        └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+    │    └ <bound method ThreadingMixIn.process_request_thread of <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>>
+    └ <Thread(Thread-1 (process_request_thread), started daemon 26988)>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+    │    │              │        └ ('127.0.0.1', 61561)
+    │    │              └ <socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>
+    │    └ <function BaseServer.finish_request at 0x000001B9A3E98EA0>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    │    │                   │        │               └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+    │    │                   │        └ ('127.0.0.1', 61561)
+    │    │                   └ <socket.socket fd=1172, family=2, type=1, proto=0, laddr=('127.0.0.1', 8000), raddr=('127.0.0.1', 61561)>
+    │    └ <class 'django.core.servers.basehttp.WSGIRequestHandler'>
+    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\socketserver.py", line 761, in __init__
+    self.handle()
+    │    └ <function WSGIRequestHandler.handle at 0x000001B9A452B740>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 223, in handle
+    self.handle_one_request()
+    │    └ <function WSGIRequestHandler.handle_one_request at 0x000001B9A452B7E0>
+    └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\servers\basehttp.py", line 248, in handle_one_request
+    handler.run(self.server.get_app())
+    │       │   │    │      └ <function WSGIServer.get_app at 0x000001B9A452A7A0>
+    │       │   │    └ <django.core.servers.basehttp.WSGIServer object at 0x000001B9A5D756A0>
+    │       │   └ <django.core.servers.basehttp.WSGIRequestHandler object at 0x000001B9A5D0C5C0>
+    │       └ <function BaseHandler.run at 0x000001B9A451A7A0>
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A62B38F0>
+  File "C:\Users\npary\AppData\Local\Programs\Python\Python312\Lib\wsgiref\handlers.py", line 137, in run
+    self.result = application(self.environ, self.start_response)
+    │    │        │           │    │        │    └ <function BaseHandler.start_response at 0x000001B9A451AB60>
+    │    │        │           │    │        └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A62B38F0>
+    │    │        │           │    └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+    │    │        │           └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A62B38F0>
+    │    │        └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000001B9A5D0D010>
+    │    └ None
+    └ <django.core.servers.basehttp.ServerHandler object at 0x000001B9A62B38F0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\contrib\staticfiles\handlers.py", line 80, in __call__
+    return self.application(environ, start_response)
+           │    │           │        └ <bound method BaseHandler.start_response of <django.core.servers.basehttp.ServerHandler object at 0x000001B9A62B38F0>>
+           │    │           └ {'ALLUSERSPROFILE': 'C:\\ProgramData', 'APPDATA': 'C:\\Users\\npary\\AppData\\Roaming', 'BUNDLED_DEBUGPY_PATH': 'c:\\Users\\n...
+           │    └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+           └ <django.contrib.staticfiles.handlers.StaticFilesHandler object at 0x000001B9A5D0D010>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\wsgi.py", line 124, in __call__
+    response = self.get_response(request)
+               │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function BaseHandler.get_response at 0x000001B9A439DF80>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 141, in get_response
+    response = self._middleware_chain(request)
+               │    │                 └ <WSGIRequest: POST '/api/communications/threads/'>
+               │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9ADE0>
+               └ <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9AD40>
+               │           └ <SecurityMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <corsheaders.middleware.CorsMiddleware object at 0x000001B9A5D0FBF0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\corsheaders\middleware.py", line 53, in __call__
+    result = self.get_response(request)
+             │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+             │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A980>
+             └ <corsheaders.middleware.CorsMiddleware object at 0x000001B9A5D0FBF0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A8E0>
+               │           └ <SessionMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A840>
+               │           └ <CommonMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A7A0>
+               │           └ <CsrfViewMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A700>
+               │           └ <AuthenticationMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function convert_exception_to_response.<locals>.inner at 0x000001B9A5D9A660>
+               │           └ <MessageMiddleware get_response=convert_exception_to_response.<locals>.inner>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\utils\deprecation.py", line 309, in __call__
+    response = response or self.get_response(request)
+               │           │    │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               │           │    └ <function BaseHandler._get_response at 0x000001B9A5D9A5C0>
+               │           └ <XFrameOptionsMiddleware get_response=BaseHandler._get_response>
+               └ None
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+               │            └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <bound method BaseHandler._get_response of <django.core.handlers.wsgi.WSGIHandler object at 0x000001B9A5D75610>>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               │                │         │                └ {}
+               │                │         └ ()
+               │                └ <WSGIRequest: POST '/api/communications/threads/'>
+               └ <function ThreadViewSet at 0x000001B9A4C3EE80>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           │         │         │       └ {}
+           │         │         └ ()
+           │         └ <WSGIRequest: POST '/api/communications/threads/'>
+           └ <function ThreadViewSet at 0x000001B9A4C3ECA0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           │    │        │         │       └ {}
+           │    │        │         └ ()
+           │    │        └ <WSGIRequest: POST '/api/communications/threads/'>
+           │    └ <function APIView.dispatch at 0x000001B9A4A5F560>
+           └ <communications.views.ThreadViewSet object at 0x000001B9A64DEBD0>
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
+    response = handler(request, *args, **kwargs)
+               │       │         │       └ {}
+               │       │         └ ()
+               │       └ <rest_framework.request.Request: POST '/api/communications/threads/'>
+               └ <bound method ThreadViewSet.create of <communications.views.ThreadViewSet object at 0x000001B9A64DEBD0>>
+
+> File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\communications\views.py", line 122, in create
+    if not serializer.is_valid():
+           │          └ <function BaseSerializer.is_valid at 0x000001B9A4962700>
+           └ ThreadSerializer(<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>, context={'request': <rest_framework.request...
+
+  File "C:\Users\npary\OneDrive\Desktop\Stuff\Fyp\ecoLoop-backend\.venv\Lib\site-packages\rest_framework\serializers.py", line 218, in is_valid
+    assert hasattr(self, 'initial_data'), (
+                   └ ThreadSerializer(<Thread: Thread between nparyan7@gmail.com and admin@gmail.com>, context={'request': <rest_framework.request...
+
+AssertionError: Cannot call `.is_valid()` as no `data=` keyword argument was passed when instantiating the serializer instance.
+2026-01-04 15:48:29.447 | CRITICAL | accounts.views:post:122 - Error during user login: [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond
+2026-01-04 15:51:18.871 | CRITICAL | accounts.views:post:122 - Error during user login: [Errno 11001] getaddrinfo failed
+2026-01-04 15:51:35.934 | CRITICAL | accounts.views:post:122 - Error during user login: [Errno 11001] getaddrinfo failed
