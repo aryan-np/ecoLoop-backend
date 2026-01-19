@@ -366,6 +366,8 @@ class OTPVerifySerializer(serializers.Serializer):
                 pending.is_used = True
                 pending.save(update_fields=["is_used"])
 
+                user_profile = UserProfile.objects.create(user=user)
+
             return {
                 "message": "Registration completed successfully.",
                 "user": {

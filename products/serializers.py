@@ -17,6 +17,7 @@ class ConditionSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     owner_email = serializers.EmailField(source="owner.email", read_only=True)
     owner_name = serializers.CharField(source="owner.full_name", read_only=True)
+    owner_id = serializers.CharField(source="owner.id", read_only=True)
 
     is_owner = serializers.SerializerMethodField()
 
@@ -41,6 +42,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "id",
             "owner_email",
             "owner_name",
+            "owner_id",
             "is_owner",
             "title",
             "image",
@@ -59,6 +61,7 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "owner_id",
             "owner_email",
             "owner_name",
             "owner_address1",

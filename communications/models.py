@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.timezone import now
+from products.models import Product
 
 User = get_user_model()
 
@@ -12,6 +13,13 @@ class Thread(models.Model):
     )
     user2 = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="user2_threads"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="threads",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

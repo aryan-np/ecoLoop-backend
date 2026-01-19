@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.pagination import PageNumberPagination
 
 from drf_spectacular.utils import (
     extend_schema,
@@ -173,13 +174,14 @@ class ThreadViewSet(viewsets.ModelViewSet):
 class MessageViewSet(viewsets.ModelViewSet):
     """
     API endpoint for managing messages.
-    - GET /api/communications/messages/?thread_id=1 - List messages in thread
+    - GET /api/communications/messages/?thread_id=1 - List messages in thread (paginated)
     - POST /api/communications/messages/ - Send message
     """
 
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     serializer_class = MessageSerializer
+    pagination_class = PageNumberPagination
 
     def get_queryset(self):
         """Get messages for a specific thread"""
@@ -221,6 +223,21 @@ class MessageViewSet(viewsets.ModelViewSet):
                 )
 
             queryset = self.get_queryset()
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                result = {
+                    "count": self.paginator.page.paginator.count,
+                    "next": self.paginator.get_next_link(),
+                    "previous": self.paginator.get_previous_link(),
+                    "results": serializer.data,
+                }
+                return api_response(
+                    result=result,
+                    is_success=True,
+                    status_code=status.HTTP_200_OK,
+                )
+
             serializer = self.get_serializer(queryset, many=True)
             return api_response(
                 result=serializer.data,
