@@ -1,1 +1,0 @@
-2026-01-05 12:22:15.079 | CRITICAL | accounts.views:post:70 - Error during user registration: UNIQUE constraint failed: accounts_pendingregistration.email

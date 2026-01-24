@@ -30,11 +30,6 @@ from drf_spectacular.utils import (
 
 
 class UserRegistrationView(APIView):
-    """
-    API view for user registration.
-    Accepts email, full_name, phone_number, password, confirm_password, and roles.
-    """
-
     permission_classes = [AllowAny]
 
     @extend_schema(
@@ -245,9 +240,30 @@ class RefreshTokenView(APIView):
 class UserProfileViewSet(viewsets.ModelViewSet):
     queryset = UserProfile.objects.select_related("user").all().order_by("-created_at")
     serializer_class = UserProfileSerializer
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     authentication_classes = [JWTAuthentication]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+    lookup_field = "user"
+    lookup_url_kwarg = "pk"  # Router uses 'pk' in the URL
+
+    def get_object(self):
+        """Override to look up UserProfile by user_id from URL parameter."""
+        queryset = self.get_queryset()
+        # Get the URL parameter value (router uses 'pk')
+        lookup_value = self.kwargs.get(self.lookup_url_kwarg)
+
+        if not lookup_value:
+            raise UserProfile.DoesNotExist("UserProfile not found")
+
+        try:
+            obj = queryset.get(user_id=lookup_value)
+            self.check_object_permissions(self.request, obj)
+            return obj
+        except UserProfile.DoesNotExist as e:
+            logger.error(
+                f"UserProfile with user_id={lookup_value} does not exist in database"
+            )
+            raise
 
     @extend_schema(
         summary="List profiles",
@@ -259,10 +275,26 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Get profile detail",
-        responses={200: UserProfileSerializer},
+        responses={
+            200: UserProfileSerializer,
+            404: OpenApiResponse(description="Profile not found."),
+        },
     )
     def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+        try:
+            instance = UserProfile.objects.get(user=kwargs.get("pk"))
+            serializer = self.get_serializer(instance)
+            return api_response(
+                is_success=True,
+                result=serializer.data,
+                status_code=status.HTTP_200_OK,
+            )
+        except UserProfile.DoesNotExist:
+            return api_response(
+                is_success=False,
+                error_message=["User profile not found."],
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
 
     @extend_schema(
         summary="Create profile",

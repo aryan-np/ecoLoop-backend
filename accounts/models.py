@@ -5,6 +5,8 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from datetime import timedelta
 
@@ -186,3 +188,11 @@ class PendingRegistration(models.Model):
     @staticmethod
     def default_expiry(minutes=10):
         return timezone.now() + timedelta(minutes=minutes)
+
+
+# Signal to automatically create UserProfile when User is created
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    """Automatically create a UserProfile when a User is created."""
+    if created:
+        UserProfile.objects.get_or_create(user=instance)

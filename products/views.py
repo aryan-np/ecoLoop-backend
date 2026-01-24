@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -19,12 +19,18 @@ from accounts.permissions import IsOwnerOrReadOnlyProduct
 from ecoLoop.utils import api_response
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List categories",
+        description="Retrieve all active product categories.",
+        responses={200: CategorySerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        summary="Get category detail",
+        responses={200: CategorySerializer},
+    ),
+)
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    API endpoint for listing categories.
-    GET /api/products/categories/ - List all active categories
-    """
-
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
 
@@ -32,12 +38,18 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
         return Category.objects.filter(is_active=True).order_by("name")
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List conditions",
+        description="Retrieve all active product conditions.",
+        responses={200: ConditionSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        summary="Get condition detail",
+        responses={200: ConditionSerializer},
+    ),
+)
 class ConditionViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    API endpoint for listing conditions.
-    GET /api/products/conditions/ - List all active conditions
-    """
-
     serializer_class = ConditionSerializer
     permission_classes = [AllowAny]
 
@@ -260,12 +272,18 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema(tags=["Product"])
-class GetUserProductsViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    API endpoint to get products of the authenticated user.
-    GET /api/products/my-products/ - List products owned by the authenticated user
-    """
-
+@extend_schema_view(
+    list=extend_schema(
+        summary="List owner's products",
+        description="Retrieve all products owned by the authenticated user.",
+        responses={200: ProductSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        summary="Get owner's product detail",
+        responses={200: ProductSerializer},
+    ),
+)
+class GetOwnerProductsViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
@@ -279,4 +297,40 @@ class GetUserProductsViewSet(viewsets.ReadOnlyModelViewSet):
             Product.objects.filter(owner=self.request.user)
             .select_related("owner", "category", "condition")
             .order_by("-created_at")
+        )
+
+
+@extend_schema(tags=["Product"])
+class GetUserProductsView(generics.ListAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+    lookup_field = "user"
+
+    def get_queryset(self):
+        user_id = self.kwargs.get("user_id")
+        return (
+            Product.objects.filter(
+                owner=user_id,
+                product_type="sell",
+                is_active=True,
+                status="available",
+            )
+            .select_related("owner", "category", "condition")
+            .order_by("-created_at")
+        )
+
+    @extend_schema(
+        summary="List user's sell products",
+        description="Retrieve all active sell products for a specific user.",
+        responses={200: ProductSerializer(many=True)},
+    )
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
         )
