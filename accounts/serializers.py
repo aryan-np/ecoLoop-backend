@@ -75,6 +75,9 @@ class UserRegistrationSerializer(serializers.Serializer):
                 {"email": "User with this email already exists."}
             )
 
+        if PendingRegistration.objects.filter(email=email, is_used=False).exists():
+            PendingRegistration.objects.filter(email=email, is_used=False).delete()
+
         try:
             validate_password(data["password"])
         except ValidationError as e:
@@ -111,7 +114,7 @@ class UserRegistrationSerializer(serializers.Serializer):
                 email=email,
                 full_name=full_name,
                 phone_number=phone_number,
-                password_hash=make_password(password),
+                password_hash=password,  # Store plain password, will be hashed by create_user
                 expires_at=PendingRegistration.default_expiry(minutes=10),
             )
 
@@ -151,11 +154,13 @@ class UserLoginSerializer(serializers.Serializer):
 
         print("Login method:", method)
 
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         if not user:
+            print("User not found for email:", email)
             raise serializers.ValidationError({"message": "Invalid credentials."})
 
         if not user.is_active:
+            print("Inactive account for email:", email)
             raise serializers.ValidationError(
                 {"message": "Account is inactive. Please contact support."}
             )
@@ -167,6 +172,7 @@ class UserLoginSerializer(serializers.Serializer):
                     {"password": "This field is required for login."}
                 )
             if not user.check_password(password):
+                print("Incorrect password for email:", email)
                 raise serializers.ValidationError({"message": "Invalid credentials."})
 
         self.user = user
@@ -359,14 +365,13 @@ class OTPVerifySerializer(serializers.Serializer):
                     email=pending.email,
                     full_name=pending.full_name,
                     phone_number=pending.phone_number,
-                    password=pending.password_hash,  # This is already hashed
+                    password=pending.password_hash,  # Plain password, create_user will hash it
                 )
                 user.is_email_verified = True
                 user.save()
                 pending.is_used = True
                 pending.save(update_fields=["is_used"])
-
-                user_profile = UserProfile.objects.create(user=user)
+                # UserProfile is auto-created by signal in models.py
 
             return {
                 "message": "Registration completed successfully.",

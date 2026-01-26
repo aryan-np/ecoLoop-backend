@@ -22,11 +22,12 @@ from ecoLoop.utils import api_response
 @extend_schema_view(
     list=extend_schema(
         summary="List categories",
-        description="Retrieve all active product categories.",
+        description="Retrieve all active product categories. No authentication required.",
         responses={200: CategorySerializer(many=True)},
     ),
     retrieve=extend_schema(
         summary="Get category detail",
+        description="Retrieve a specific category by ID. No authentication required.",
         responses={200: CategorySerializer},
     ),
 )
@@ -37,15 +38,34 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return Category.objects.filter(is_active=True).order_by("name")
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
 
 @extend_schema_view(
     list=extend_schema(
         summary="List conditions",
-        description="Retrieve all active product conditions.",
+        description="Retrieve all active product conditions. No authentication required.",
         responses={200: ConditionSerializer(many=True)},
     ),
     retrieve=extend_schema(
         summary="Get condition detail",
+        description="Retrieve a specific condition by ID. No authentication required.",
         responses={200: ConditionSerializer},
     ),
 )
@@ -55,6 +75,24 @@ class ConditionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return Condition.objects.filter(is_active=True).order_by("name")
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
 
 
 @extend_schema(tags=["Product"])
@@ -101,6 +139,15 @@ class ProductViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = ProductStatusFilter
 
+    def get_permissions(self):
+        """
+        Allow list and retrieve for anyone.
+        Require authentication for create, update, partial_update, and destroy.
+        """
+        if self.action in ["list", "retrieve"]:
+            return [AllowAny()]
+        return [IsAuthenticated(), IsOwnerOrReadOnlyProduct()]
+
     def get_queryset(self):
         # Only return products with type "sell" (status filter applied separately)
 
@@ -118,7 +165,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="List sell products",
-        description="List all active products where product_type='sell'.",
+        description="List all active sell products. No authentication required. Pagination supported.",
         responses={200: ProductSerializer(many=True)},
     )
     def list(self, request, *args, **kwargs):
@@ -148,9 +195,10 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Get sell product detail",
+        description="Retrieve a specific product by ID. No authentication required.",
         responses={
             200: ProductSerializer,
-            404: OpenApiResponse(description="Not found."),
+            404: OpenApiResponse(description="Product not found."),
         },
     )
     def retrieve(self, request, *args, **kwargs):
@@ -164,12 +212,12 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Create sell product",
-        description="Create a product listing (product_type is forced to 'sell').",
+        description="Create a new product listing (product_type is forced to 'sell'). Requires authentication.",
         request=ProductSerializer,
         responses={
             201: ProductSerializer,
             400: OpenApiResponse(description="Validation error."),
-            401: OpenApiResponse(description="Unauthorized."),
+            401: OpenApiResponse(description="Unauthorized. Authentication required."),
         },
     )
     def create(self, request, *args, **kwargs):
@@ -193,12 +241,14 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Update sell product (full)",
+        description="Fully update a product (all fields required). Only the owner or admins can update.",
         request=ProductSerializer,
         responses={
             200: ProductSerializer,
             400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized. Authentication required."),
             403: OpenApiResponse(description="Not allowed (not owner)."),
-            404: OpenApiResponse(description="Not found."),
+            404: OpenApiResponse(description="Product not found."),
         },
     )
     def update(self, request, *args, **kwargs):
@@ -223,12 +273,14 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Update sell product (partial)",
+        description="Partially update a product (only provided fields updated). Only the owner or admins can update.",
         request=ProductSerializer,
         responses={
             200: ProductSerializer,
             400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized. Authentication required."),
             403: OpenApiResponse(description="Not allowed (not owner)."),
-            404: OpenApiResponse(description="Not found."),
+            404: OpenApiResponse(description="Product not found."),
         },
     )
     def partial_update(self, request, *args, **kwargs):
@@ -253,10 +305,12 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Delete sell product",
+        description="Delete a product. Only the owner or admins can delete.",
         responses={
-            204: OpenApiResponse(description="Deleted."),
+            204: OpenApiResponse(description="Product deleted successfully."),
+            401: OpenApiResponse(description="Unauthorized. Authentication required."),
             403: OpenApiResponse(description="Not allowed (not owner)."),
-            404: OpenApiResponse(description="Not found."),
+            404: OpenApiResponse(description="Product not found."),
         },
     )
     def destroy(self, request, *args, **kwargs):
@@ -274,13 +328,17 @@ class ProductViewSet(viewsets.ModelViewSet):
 @extend_schema(tags=["Product"])
 @extend_schema_view(
     list=extend_schema(
-        summary="List owner's products",
-        description="Retrieve all products owned by the authenticated user.",
+        summary="List owner's sell products",
+        description="Retrieve all products owned by the authenticated user. Requires authentication.",
         responses={200: ProductSerializer(many=True)},
     ),
     retrieve=extend_schema(
         summary="Get owner's product detail",
-        responses={200: ProductSerializer},
+        description="Retrieve a specific product owned by the authenticated user. Requires authentication.",
+        responses={
+            200: ProductSerializer,
+            404: OpenApiResponse(description="Product not found."),
+        },
     ),
 )
 class GetOwnerProductsViewSet(viewsets.ReadOnlyModelViewSet):
@@ -297,6 +355,24 @@ class GetOwnerProductsViewSet(viewsets.ReadOnlyModelViewSet):
             Product.objects.filter(owner=self.request.user)
             .select_related("owner", "category", "condition")
             .order_by("-created_at")
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
         )
 
 
@@ -323,8 +399,11 @@ class GetUserProductsView(generics.ListAPIView):
 
     @extend_schema(
         summary="List user's sell products",
-        description="Retrieve all active sell products for a specific user.",
-        responses={200: ProductSerializer(many=True)},
+        description="Retrieve all active sell products for a specific user. No authentication required. Pass user UUID in the URL.",
+        responses={
+            200: ProductSerializer(many=True),
+            404: OpenApiResponse(description="User not found."),
+        },
     )
     def get(self, request, *args, **kwargs):
         queryset = self.get_queryset()

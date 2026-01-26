@@ -43,13 +43,6 @@ from loguru import logger
     ),
 )
 class ThreadViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for managing chat threads.
-    - GET /api/communications/threads/ - List all threads for authenticated user
-    - POST /api/communications/threads/ - Create new thread
-    - GET /api/communications/threads/{id}/ - Get thread with all messages
-    """
-
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     serializer_class = ThreadSerializer
@@ -172,11 +165,6 @@ class ThreadViewSet(viewsets.ModelViewSet):
     ),
 )
 class MessageViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint for managing messages.
-    - GET /api/communications/messages/?thread_id=1 - List messages in thread (paginated)
-    - POST /api/communications/messages/ - Send message
-    """
 
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]

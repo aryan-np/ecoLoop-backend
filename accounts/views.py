@@ -101,10 +101,13 @@ class UserLoginView(APIView):
             if "message" in serializer.errors and "Invalid credentials." in str(
                 serializer.errors.get("message", "")
             ):
+                logger.warning(
+                    f"Invalid login attempt for email: {request.data.get('email')}"
+                )
                 return api_response(
                     is_success=False,
                     error_message=serializer.errors,
-                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    status_code=status.HTTP_400_BAD_REQUEST,
                 )
 
             return api_response(
@@ -123,10 +126,6 @@ class UserLoginView(APIView):
 
 
 class UserLogoutView(APIView):
-    """
-    API view for user logout with JWT token blacklisting.
-    Requires authentication and accepts refresh token to blacklist.
-    """
 
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
@@ -175,10 +174,6 @@ class UserLogoutView(APIView):
 
 
 class RefreshTokenView(APIView):
-    """
-    API view to refresh access token using refresh token.
-    """
-
     permission_classes = [AllowAny]
 
     @extend_schema(
@@ -243,42 +238,62 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     authentication_classes = [JWTAuthentication]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
-    lookup_field = "user"
-    lookup_url_kwarg = "pk"  # Router uses 'pk' in the URL
 
     def get_object(self):
-        """Override to look up UserProfile by user_id from URL parameter."""
+
         queryset = self.get_queryset()
-        # Get the URL parameter value (router uses 'pk')
-        lookup_value = self.kwargs.get(self.lookup_url_kwarg)
+        lookup_value = self.kwargs.get("pk")
 
         if not lookup_value:
-            raise UserProfile.DoesNotExist("UserProfile not found")
+            raise UserProfile.DoesNotExist("Profile not found")
 
+        # For retrieve action, lookup by user_id
+        if self.action == "retrieve":
+            try:
+                obj = queryset.get(user=lookup_value)
+                self.check_object_permissions(self.request, obj)
+                return obj
+            except UserProfile.DoesNotExist as e:
+                logger.error(f"UserProfile with user_id={lookup_value} does not exist")
+                raise
+
+        # For other actions (update, partial_update, destroy), lookup by profile id
         try:
-            obj = queryset.get(user_id=lookup_value)
+            obj = queryset.get(id=lookup_value)
             self.check_object_permissions(self.request, obj)
             return obj
         except UserProfile.DoesNotExist as e:
-            logger.error(
-                f"UserProfile with user_id={lookup_value} does not exist in database"
-            )
+            logger.error(f"UserProfile with id={lookup_value} does not exist")
             raise
 
     @extend_schema(
         summary="List profiles",
-        description="Normal users see only their own profile; admins can see all.",
-        responses={200: UserProfileSerializer(many=True)},
+        description="Normal users see only their own profile; admins can see all profiles.",
+        responses={
+            200: UserProfileSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden."),
+        },
+        tags=["User Profile"],
     )
     def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
 
     @extend_schema(
-        summary="Get profile detail",
+        summary="Get profile detail by user ID",
+        description="Retrieve a user profile by providing the user UUID. Requires authentication.",
         responses={
             200: UserProfileSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
             404: OpenApiResponse(description="Profile not found."),
         },
+        tags=["User Profile"],
     )
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -298,48 +313,110 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Create profile",
-        description="Create a profile for the authenticated user (only if your system allows POST).",
+        description="Create a new user profile for the authenticated user. User profile is auto-created, but this endpoint allows manual creation if needed.",
         request=UserProfileSerializer,
         responses={
             201: UserProfileSerializer,
             400: OpenApiResponse(description="Validation error."),
             401: OpenApiResponse(description="Unauthorized."),
         },
+        tags=["User Profile"],
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        self.perform_create(serializer)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_201_CREATED,
+        )
 
     @extend_schema(
         summary="Update profile (full)",
+        description="Fully update a user profile by profile ID. All fields must be provided. Only the owner or admins can update.",
         request=UserProfileSerializer,
         responses={
             200: UserProfileSerializer,
-            403: OpenApiResponse(description="Not allowed (not owner)"),
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Not allowed (not owner)."),
+            404: OpenApiResponse(description="Profile not found."),
         },
+        tags=["User Profile"],
     )
     def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        self.perform_update(serializer)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         summary="Update profile (partial)",
+        description="Partially update a user profile by profile ID. Only provided fields will be updated. Only the owner or admins can update.",
         request=UserProfileSerializer,
         responses={
             200: UserProfileSerializer,
-            403: OpenApiResponse(description="Not allowed (not owner)"),
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Not allowed (not owner)."),
+            404: OpenApiResponse(description="Profile not found."),
         },
+        tags=["User Profile"],
     )
     def partial_update(self, request, *args, **kwargs):
-        return super().partial_update(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        self.perform_update(serializer)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         summary="Delete profile",
+        description="Delete a user profile by profile ID. Only the owner or admins can delete. This will not delete the associated user account.",
         responses={
-            204: OpenApiResponse(description="Deleted."),
-            403: OpenApiResponse(description="Not allowed (not owner)"),
+            204: OpenApiResponse(description="Profile deleted successfully."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Not allowed (not owner)."),
+            404: OpenApiResponse(description="Profile not found."),
         },
+        tags=["User Profile"],
     )
     def destroy(self, request, *args, **kwargs):
-        return super().destroy(request, *args, **kwargs)
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return api_response(
+            result={"message": "Deleted successfully."},
+            is_success=True,
+            status_code=status.HTTP_204_NO_CONTENT,
+        )
 
     def get_queryset(self):
         user = self.request.user
