@@ -21,9 +21,12 @@ def custom_exception_handler(exc, context):
     request = context.get("request")
     view = context.get("view")
 
+    # Escape curly braces in exception message to prevent format() errors
+    exc_message = str(exc).replace("{", "{{").replace("}", "}}")
+
     log_context = {
         "exception_class": exc.__class__.__name__,
-        "exception_message": str(exc),
+        "exception_message": exc_message,
         "path": request.path if request else "N/A",
         "method": request.method if request else "N/A",
         "view": view.__class__.__name__ if view else "N/A",

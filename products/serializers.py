@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Category, Condition
+from .models import Product, Category, Condition, ProductImage
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -12,6 +12,42 @@ class ConditionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Condition
         fields = ["id", "name", "description"]
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["id", "image", "uploaded_at"]
+        read_only_fields = ["id", "uploaded_at"]
+
+
+class ProductListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for product list - returns first image only"""
+
+    category = CategorySerializer(read_only=True)
+    condition = ConditionSerializer(read_only=True)
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "title",
+            "category",
+            "condition",
+            "price",
+            "image",
+        ]
+
+    def get_image(self, obj):
+        """Return first image URL or None"""
+        first_image = obj.images.first()
+        if first_image and first_image.image:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(first_image.image.url)
+            return first_image.image.url
+        return None
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -36,6 +72,14 @@ class ProductSerializer(serializers.ModelSerializer):
         source="condition",
     )
 
+    # Multiple images support
+    images = ProductImageSerializer(many=True, read_only=True)
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+    )
+
     class Meta:
         model = Product
         fields = [
@@ -45,7 +89,8 @@ class ProductSerializer(serializers.ModelSerializer):
             "owner_id",
             "is_owner",
             "title",
-            "image",
+            "images",
+            "uploaded_images",
             "status",
             "description",
             "category",
@@ -78,7 +123,28 @@ class ProductSerializer(serializers.ModelSerializer):
             return False
         return obj.owner_id == request.user.id
 
+    def create(self, validated_data):
+        uploaded_images = validated_data.pop("uploaded_images", [])
+        print("Uploaded images:", uploaded_images)
+        product = Product.objects.create(**validated_data)
+
+        # Create ProductImage instances for each uploaded image
+        for image in uploaded_images:
+            ProductImage.objects.create(product=product, image=image)
+
+        return product
+
     def update(self, instance, validated_data):
         if instance.status != "available":
             raise serializers.ValidationError("Only available products can be updated.")
-        return super().update(instance, validated_data)
+
+        uploaded_images = validated_data.pop("uploaded_images", [])
+
+        # Update product fields
+        instance = super().update(instance, validated_data)
+
+        # Add new images if provided
+        for image in uploaded_images:
+            ProductImage.objects.create(product=instance, image=image)
+
+        return instance

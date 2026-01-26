@@ -12,8 +12,13 @@ from drf_spectacular.utils import (
     OpenApiResponse,
 )
 
-from .models import Product, Category, Condition
-from .serializers import ProductSerializer, CategorySerializer, ConditionSerializer
+from .models import Product, Category, Condition, ProductImage
+from .serializers import (
+    ProductSerializer,
+    ProductListSerializer,
+    CategorySerializer,
+    ConditionSerializer,
+)
 from .filters import ProductStatusFilter
 from accounts.permissions import IsOwnerOrReadOnlyProduct
 from ecoLoop.utils import api_response
@@ -148,6 +153,12 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         return [IsAuthenticated(), IsOwnerOrReadOnlyProduct()]
 
+    def get_serializer_class(self):
+        """Use ProductListSerializer for list, ProductSerializer for everything else"""
+        if self.action == "list":
+            return ProductListSerializer
+        return ProductSerializer
+
     def get_queryset(self):
         # Only return products with type "sell" (status filter applied separately)
 
@@ -156,6 +167,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 is_active=True, product_type="sell", status="available"
             )
             .select_related("owner", "category", "condition")
+            .prefetch_related("images")
             .order_by("-created_at")
         )
 
