@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "accounts",
     "products",
     "communications",
+    "recycle",
 ]
 
 MIDDLEWARE = [

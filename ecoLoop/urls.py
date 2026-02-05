@@ -30,6 +30,7 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("api/product/", include("products.urls")),
     path("api/communications/", include("communications.urls")),
+    path("api/recycle/", include("recycle.urls")),
     # OpenAPI schema (JSON)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # Swagger UI
