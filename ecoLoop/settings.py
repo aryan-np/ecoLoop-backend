@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "products",
     "communications",
     "recycle",
+    "donations",
 ]
 
 MIDDLEWARE = [

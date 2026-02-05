@@ -2,18 +2,23 @@ from django.shortcuts import render
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from recycle.models import ScrapCategory, ScrapRequest
-from recycle.serializers import ScrapCategorySerializer, ScrapRequestSerializer
+from .models import DonationCategory, DonationCondition, DonationRequest
+from .serializers import (
+    DonationCategorySerializer,
+    DonationConditionSerializer,
+    DonationRequestSerializer,
+)
 from ecoLoop.utils import api_response
+
 
 # Create your views here.
 
 
-class ScrapCategoryViewSet(viewsets.ModelViewSet):
+class DonationCategoryViewSet(viewsets.ModelViewSet):
     authentication_classes = []
     permission_classes = [AllowAny]
-    queryset = ScrapCategory.objects.all()
-    serializer_class = ScrapCategorySerializer
+    queryset = DonationCategory.objects.all()
+    serializer_class = DonationCategorySerializer
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -34,13 +39,38 @@ class ScrapCategoryViewSet(viewsets.ModelViewSet):
         )
 
 
-class ScrapRequestViewSet(viewsets.ModelViewSet):
+class DonationConditionViewSet(viewsets.ModelViewSet):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    queryset = DonationCondition.objects.all()
+    serializer_class = DonationConditionSerializer
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class DonationRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = ScrapRequestSerializer
+    serializer_class = DonationRequestSerializer
 
     def get_queryset(self):
-        # Users can only see their own scrap requests
-        return ScrapRequest.objects.filter(user=self.request.user)
+        # Users can only see their own donation requests
+        return DonationRequest.objects.filter(user=self.request.user)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

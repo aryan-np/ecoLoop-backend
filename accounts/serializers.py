@@ -35,6 +35,7 @@ class UserSerializer(serializers.ModelSerializer):
             "full_name",
             "phone_number",
             "roles",
+            "is_active",
             "is_email_verified",
             "is_phone_verified",
             "date_joined",
@@ -221,6 +222,7 @@ class UserLoginSerializer(serializers.Serializer):
                 "email": user.email,
                 "full_name": user.full_name,
                 "phone_number": user.phone_number,
+                "roles": [{"id": role.id, "name": role.name} for role in user.roles.all()],
             },
             "tokens": {
                 "refresh": str(refresh),

@@ -18,9 +18,9 @@ from accounts.serializers import (
     UserSerializer,
     OTPVerifySerializer,
 )
-from .models import UserProfile
+from .models import UserProfile, User
 from .serializers import UserProfileSerializer
-from .permissions import IsOwnerOrReadOnly
+from .permissions import IsOwnerOrReadOnly, IsSuperUser
 
 from drf_spectacular.utils import (
     extend_schema,
@@ -467,3 +467,227 @@ class OTPVerifyView(APIView):
                 error_message=["Something went wrong. Please try again."],
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+@extend_schema(tags=["Admin - User Management"])
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing users. Only accessible to superusers.
+    Provides full CRUD operations on user accounts.
+    """
+
+    serializer_class = UserSerializer
+    permission_classes = [IsSuperUser]
+    authentication_classes = [JWTAuthentication]
+    queryset = User.objects.all().order_by("-date_joined")
+    lookup_field = "id"
+
+    @extend_schema(
+        summary="List all users",
+        description="Retrieve a list of all users with pagination and counts. Only accessible to superusers.",
+        responses={
+            200: UserSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+        },
+    )
+    def list(self, request, *args, **kwargs):
+        from products.models import Product
+        from donations.models import DonationRequest
+        from recycle.models import ScrapRequest
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            data = self.get_serializer(page, many=True).data
+
+            # Add counts to each user
+            for user_data in data:
+                user_id = user_data["id"]
+                user_data["listing"] = {
+                    "products_count": Product.objects.filter(owner_id=user_id).count(),
+                    "donations_count": DonationRequest.objects.filter(
+                        user_id=user_id
+                    ).count(),
+                    "recycles_count": ScrapRequest.objects.filter(
+                        user_id=user_id
+                    ).count(),
+                }
+
+            result = {
+                "count": getattr(self.paginator.page.paginator, "count", len(data)),
+                "next": self.paginator.get_next_link(),
+                "previous": self.paginator.get_previous_link(),
+                "results": data,
+            }
+            return api_response(
+                result=result,
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        data = self.get_serializer(queryset, many=True).data
+
+        # Add counts to each user
+        for user_data in data:
+            user_id = user_data["id"]
+            user_data["listing"] = {
+                "products_count": Product.objects.filter(owner_id=user_id).count(),
+                "donations_count": DonationRequest.objects.filter(
+                    user_id=user_id
+                ).count(),
+                "recycles_count": ScrapRequest.objects.filter(user_id=user_id).count(),
+            }
+
+        return api_response(
+            result=data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Get user details with counts",
+        description="Retrieve details of a specific user by ID including counts of products, donations, and recycle requests. Only accessible to superusers.",
+        responses={
+            200: UserSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        from products.models import Product
+        from donations.models import DonationRequest
+        from recycle.models import ScrapRequest
+
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        # Get counts
+        user_data = serializer.data
+        user_data["products_count"] = Product.objects.filter(owner=instance).count()
+        user_data["donations_count"] = DonationRequest.objects.filter(
+            user=instance
+        ).count()
+        user_data["recycles_count"] = ScrapRequest.objects.filter(user=instance).count()
+
+        return api_response(
+            result=user_data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Create a new user",
+        description="Create a new user account. Only accessible to superusers.",
+        request=UserSerializer,
+        responses={
+            201: UserSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_create(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="Update user (full)",
+        description="Fully update a user account. Only accessible to superusers.",
+        request=UserSerializer,
+        responses={
+            200: UserSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Update user (partial)",
+        description="Partially update a user account. Only accessible to superusers.",
+        request=UserSerializer,
+        responses={
+            200: UserSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Delete user",
+        description="Delete a user account. Only accessible to superusers.",
+        responses={
+            204: OpenApiResponse(description="User deleted successfully."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="User not found."),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+
+        return api_response(
+            result={"message": "User deleted successfully."},
+            is_success=True,
+            status_code=status.HTTP_204_NO_CONTENT,
+        )

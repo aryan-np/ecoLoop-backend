@@ -7,10 +7,12 @@ from accounts.views import (
     RefreshTokenView,
     UserProfileViewSet,
     OTPVerifyView,
+    UserViewSet,
 )
 
 router = DefaultRouter()
 router.register(r"user-profile", UserProfileViewSet, basename="user-profile")
+router.register(r"users", UserViewSet, basename="users")
 
 urlpatterns = [
     path("register/", UserRegistrationView.as_view(), name="user-register"),
