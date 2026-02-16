@@ -10,6 +10,8 @@ from django.dispatch import receiver
 
 from datetime import timedelta
 
+from products.models import Product
+
 
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -275,8 +277,7 @@ class Report(models.Model):
         ("technical", "Technical Issue"),
         ("user_behavior", "User Behavior"),
         ("product", "Product Issue"),
-        ("transaction", "Transaction Issue"),
-        ("spam", "Spam"),
+        ("message", "Message Issue"),
         ("other", "Other"),
     ]
 
@@ -287,6 +288,21 @@ class Report(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     subject = models.CharField(max_length=255)
     description = models.TextField()
+
+    target_user_id = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="targeted_reports",
+        null=True,
+        blank=True,
+    )
+    listing_id = models.ForeignKey(
+        Product, on_delete=models.CASCADE, null=True, blank=True
+    )
+
+    conversation_id = models.ForeignKey(
+        "communications.Thread", on_delete=models.CASCADE, null=True, blank=True
+    )
 
     # Supporting files
     attachment = models.FileField(
@@ -310,6 +326,7 @@ class Report(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
 
+    is_active = models.BooleanField(default=True)  # For soft deletion
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

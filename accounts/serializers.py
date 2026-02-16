@@ -454,7 +454,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     full_name = serializers.CharField(source="user.full_name")
     phone_number = serializers.CharField(source="user.phone_number", read_only=True)
+    is_email_verified = serializers.BooleanField(
+        source="user.is_email_verified", read_only=True
+    )
+    is_phone_verified = serializers.BooleanField(
+        source="user.is_phone_verified", read_only=True
+    )
     profile_picture = serializers.ImageField(required=False, allow_null=True)
+    roles = serializers.SerializerMethodField()
 
     class Meta:
         model = UserProfile
@@ -463,6 +470,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "email",
             "full_name",
             "phone_number",
+            "roles",
             "profile_picture",
             "city",
             "area",
@@ -470,10 +478,23 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "bio",
+            "is_email_verified",
+            "is_phone_verified",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at", "latitude", "longitude"]
+
+    def get_roles(self, obj):
+        """Return list of role names and descriptions."""
+        return [
+            {
+                "id": role.id,
+                "name": role.name,
+                "description": role.description,
+            }
+            for role in obj.user.roles.all()
+        ]
 
     def update(self, instance, validated_data):
         # Handle nested user fields
@@ -604,6 +625,9 @@ class ReportSerializer(serializers.ModelSerializer):
             "user_name",
             "user_email",
             "category",
+            "listing_id",
+            "target_user_id",
+            "conversation_id",
             "subject",
             "description",
             "attachment",
@@ -628,6 +652,37 @@ class ReportSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate(self, data):
+        category = data.get("category")
+        listing_id = data.get("listing_id")
+        conversation_id = data.get("conversation_id")
+        target_user_id = data.get("target_user_id")
+
+        # Validate required fields based on category
+        if category == "product":
+            if not listing_id:
+                raise serializers.ValidationError(
+                    {"listing_id": "Listing ID is required when category is 'product'."}
+                )
+
+        if category == "message":
+            if not conversation_id:
+                raise serializers.ValidationError(
+                    {
+                        "conversation_id": "Conversation ID is required when category is 'message'."
+                    }
+                )
+
+        if category == "user_behavior":
+            if not target_user_id:
+                raise serializers.ValidationError(
+                    {
+                        "target_user_id": "Target user ID is required when category is 'user_behavior'."
+                    }
+                )
+
+        return data
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
