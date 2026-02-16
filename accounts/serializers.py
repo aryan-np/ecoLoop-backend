@@ -2,6 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,6 +13,8 @@ from accounts.models import (
     UserProfile,
     OTPVerification,
     PendingRegistration,
+    RoleApplication,
+    Report,
 )
 from accounts.otp import generate_otp, hash_otp, verify_otp
 from ecoLoop.mail import (
@@ -222,7 +225,9 @@ class UserLoginSerializer(serializers.Serializer):
                 "email": user.email,
                 "full_name": user.full_name,
                 "phone_number": user.phone_number,
-                "roles": [{"id": role.id, "name": role.name} for role in user.roles.all()],
+                "roles": [
+                    {"id": role.id, "name": role.name} for role in user.roles.all()
+                ],
             },
             "tokens": {
                 "refresh": str(refresh),
@@ -488,3 +493,201 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class RoleApplicationSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    user_details = serializers.SerializerMethodField(read_only=True)
+    reviewed_by_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = RoleApplication
+        fields = [
+            "id",
+            "user",
+            "user_details",
+            "role_type",
+            "organization_name",
+            "registration_number",
+            "address",
+            "description",
+            "document",
+            "status",
+            "admin_notes",
+            "reviewed_by",
+            "reviewed_by_details",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "user",
+            "user_details",
+            "status",
+            "admin_notes",
+            "reviewed_by",
+            "reviewed_by_details",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_user_details(self, obj):
+        return {
+            "id": str(obj.user.id),
+            "email": obj.user.email,
+            "full_name": obj.user.full_name,
+            "phone_number": obj.user.phone_number,
+        }
+
+    def get_reviewed_by_details(self, obj):
+        if obj.reviewed_by:
+            return {
+                "id": str(obj.reviewed_by.id),
+                "email": obj.reviewed_by.email,
+                "full_name": obj.reviewed_by.full_name,
+            }
+        return None
+
+    def validate(self, data):
+        # Check if user already has a pending application for this role
+        user = self.context["request"].user
+        role_type = data.get("role_type")
+
+        if RoleApplication.objects.filter(
+            user=user, role_type=role_type, status="pending"
+        ).exists():
+            raise serializers.ValidationError(
+                f"You already have a pending {role_type} application."
+            )
+
+        # Check if user already has this role
+        if user.roles.filter(name=role_type).exists():
+            raise serializers.ValidationError(f"You already have the {role_type} role.")
+
+        return data
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)
+
+
+class RoleApplicationReviewSerializer(serializers.Serializer):
+    """Serializer for admin to approve/reject applications"""
+
+    action = serializers.ChoiceField(choices=["approve", "reject"], required=True)
+    admin_notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, data):
+        if data["action"] == "reject" and not data.get("admin_notes"):
+            raise serializers.ValidationError(
+                "Admin notes are required when rejecting an application."
+            )
+        return data
+
+
+class ReportSerializer(serializers.ModelSerializer):
+    """Serializer for user-facing report operations"""
+
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_email = serializers.CharField(source="user.email", read_only=True)
+    reviewed_by_name = serializers.CharField(
+        source="reviewed_by.full_name", read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = Report
+        fields = [
+            "id",
+            "user",
+            "user_name",
+            "user_email",
+            "category",
+            "subject",
+            "description",
+            "attachment",
+            "status",
+            "admin_notes",
+            "reviewed_by",
+            "reviewed_by_name",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "user",
+            "user_name",
+            "user_email",
+            "status",
+            "admin_notes",
+            "reviewed_by",
+            "reviewed_by_name",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
+        ]
+
+    def create(self, validated_data):
+        validated_data["user"] = self.context["request"].user
+        return super().create(validated_data)
+
+
+class ReportAdminSerializer(serializers.ModelSerializer):
+    """Serializer for admin operations on reports"""
+
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    user_email = serializers.CharField(source="user.email", read_only=True)
+    reviewed_by_name = serializers.CharField(
+        source="reviewed_by.full_name", read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = Report
+        fields = [
+            "id",
+            "user",
+            "user_name",
+            "user_email",
+            "category",
+            "subject",
+            "description",
+            "attachment",
+            "status",
+            "admin_notes",
+            "reviewed_by",
+            "reviewed_by_name",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "user",
+            "user_name",
+            "user_email",
+            "category",
+            "subject",
+            "description",
+            "attachment",
+            "reviewed_by_name",
+            "created_at",
+        ]
+
+    def update(self, instance, validated_data):
+        # If status is being changed, update reviewed_by and reviewed_at
+        if "status" in validated_data and validated_data["status"] != instance.status:
+            instance.reviewed_by = self.context["request"].user
+            instance.reviewed_at = timezone.now()
+
+        return super().update(instance, validated_data)
+
+
+class ReportReviewSerializer(serializers.Serializer):
+    """Serializer for admin to review reports"""
+
+    action = serializers.ChoiceField(
+        choices=["in_review", "resolve", "close"], required=True
+    )
+    admin_notes = serializers.CharField(required=False, allow_blank=True)

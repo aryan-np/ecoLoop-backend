@@ -26,3 +26,17 @@ admin.site.register(models.UserProfile, UserProfileAdmin)
 admin.site.register(models.PendingRegistration)
 admin.site.register(models.Role)
 admin.site.register(models.OTPVerification)
+
+
+class RoleApplicationAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "role_type", "organization_name", "status", "created_at", "reviewed_at")
+    search_fields = ("user__email", "organization_name", "registration_number")
+    list_filter = ("status", "role_type", "created_at", "reviewed_at")
+    ordering = ("-created_at",)
+    readonly_fields = ("id", "created_at", "updated_at", "reviewed_at", "reviewed_by")
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'reviewed_by')
+
+
+admin.site.register(models.RoleApplication, RoleApplicationAdmin)

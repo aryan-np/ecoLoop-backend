@@ -8,11 +8,25 @@ from accounts.views import (
     UserProfileViewSet,
     OTPVerifyView,
     UserViewSet,
+    RoleApplicationViewSet,
+    AdminRoleApplicationViewSet,
+    ReportViewSet,
+    AdminReportViewSet,
 )
 
 router = DefaultRouter()
 router.register(r"user-profile", UserProfileViewSet, basename="user-profile")
 router.register(r"users", UserViewSet, basename="users")
+router.register(
+    r"role-applications", RoleApplicationViewSet, basename="role-applications"
+)
+router.register(
+    r"admin/role-applications",
+    AdminRoleApplicationViewSet,
+    basename="admin-role-applications",
+)
+router.register(r"reports", ReportViewSet, basename="reports")
+router.register(r"admin/reports", AdminReportViewSet, basename="admin-reports")
 
 urlpatterns = [
     path("register/", UserRegistrationView.as_view(), name="user-register"),

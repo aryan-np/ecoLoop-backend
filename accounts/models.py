@@ -196,3 +196,129 @@ def create_user_profile(sender, instance, created, **kwargs):
     """Automatically create a UserProfile when a User is created."""
     if created:
         UserProfile.objects.get_or_create(user=instance)
+
+
+class RoleApplication(models.Model):
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+
+    ROLE_CHOICES = [
+        ("RECYCLER", "Recycler"),
+        ("NGO", "NGO"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="role_applications"
+    )
+    role_type = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
+    # Application details
+    organization_name = models.CharField(max_length=255)
+    registration_number = models.CharField(max_length=100, blank=True, null=True)
+    address = models.TextField()
+    description = models.TextField(
+        help_text="Why you want this role and what you plan to do"
+    )
+
+    # Supporting documents
+    document = models.FileField(
+        upload_to="role_applications/",
+        blank=True,
+        null=True,
+        help_text="Upload registration certificate or related documents",
+    )
+
+    # Status tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    admin_notes = models.TextField(
+        blank=True, null=True, help_text="Admin's comments on the application"
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_applications",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ["user", "role_type", "status"]
+        indexes = [
+            models.Index(fields=["status", "role_type"]),
+            models.Index(fields=["user", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.role_type} Application ({self.status})"
+
+
+class Report(models.Model):
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("in_review", "In Review"),
+        ("resolved", "Resolved"),
+        ("closed", "Closed"),
+    ]
+
+    CATEGORY_CHOICES = [
+        ("technical", "Technical Issue"),
+        ("user_behavior", "User Behavior"),
+        ("product", "Product Issue"),
+        ("transaction", "Transaction Issue"),
+        ("spam", "Spam"),
+        ("other", "Other"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reports")
+
+    # Report details
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    subject = models.CharField(max_length=255)
+    description = models.TextField()
+
+    # Supporting files
+    attachment = models.FileField(
+        upload_to="reports/",
+        blank=True,
+        null=True,
+        help_text="Upload screenshots or related files",
+    )
+
+    # Status tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    admin_notes = models.TextField(
+        blank=True, null=True, help_text="Admin's response or notes"
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_reports",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "category"]),
+            models.Index(fields=["user", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Report #{self.id.hex[:8]} - {self.subject} ({self.status})"

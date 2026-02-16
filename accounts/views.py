@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
@@ -17,8 +18,13 @@ from accounts.serializers import (
     LogoutSerializer,
     UserSerializer,
     OTPVerifySerializer,
+    RoleApplicationSerializer,
+    RoleApplicationReviewSerializer,
+    ReportSerializer,
+    ReportAdminSerializer,
+    ReportReviewSerializer,
 )
-from .models import UserProfile, User
+from .models import UserProfile, User, RoleApplication, Report
 from .serializers import UserProfileSerializer
 from .permissions import IsOwnerOrReadOnly, IsSuperUser
 
@@ -690,4 +696,699 @@ class UserViewSet(viewsets.ModelViewSet):
             result={"message": "User deleted successfully."},
             is_success=True,
             status_code=status.HTTP_204_NO_CONTENT,
+        )
+
+
+@extend_schema(tags=["Role Applications"])
+class RoleApplicationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for users to submit and view role applications (Recycler/NGO).
+    Users can create and view their own applications.
+    """
+
+    serializer_class = RoleApplicationSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def get_queryset(self):
+        """Users can only see their own applications"""
+        return RoleApplication.objects.filter(user=self.request.user).order_by(
+            "-created_at"
+        )
+
+    @extend_schema(
+        summary="List my role applications",
+        description="Get all role applications submitted by the authenticated user.",
+        responses={
+            200: RoleApplicationSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+        },
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Get role application details",
+        description="Retrieve details of a specific role application.",
+        responses={
+            200: RoleApplicationSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Application not found."),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Submit a role application",
+        description="Submit an application to become a Recycler or NGO.",
+        request=RoleApplicationSerializer,
+        responses={
+            201: RoleApplicationSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer.save()
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="Update role application",
+        description="Update a pending role application. Only pending applications can be updated.",
+        request=RoleApplicationSerializer,
+        responses={
+            200: RoleApplicationSerializer,
+            400: OpenApiResponse(
+                description="Validation error or application not pending."
+            ),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Application not found."),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"detail": "Only pending applications can be updated."},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Partial update role application",
+        description="Partially update a pending role application.",
+        request=RoleApplicationSerializer,
+        responses={
+            200: RoleApplicationSerializer,
+            400: OpenApiResponse(
+                description="Validation error or application not pending."
+            ),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Application not found."),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"detail": "Only pending applications can be updated."},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Delete role application",
+        description="Delete a pending role application.",
+        responses={
+            204: OpenApiResponse(description="Application deleted successfully."),
+            400: OpenApiResponse(description="Cannot delete non-pending application."),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Application not found."),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"detail": "Only pending applications can be deleted."},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_destroy(instance)
+
+        return api_response(
+            result={"message": "Application deleted successfully."},
+            is_success=True,
+            status_code=status.HTTP_204_NO_CONTENT,
+        )
+
+
+@extend_schema(tags=["Admin - Role Applications"])
+class AdminRoleApplicationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for admins to view and review role applications.
+    Only superusers can access these endpoints.
+    """
+
+    serializer_class = RoleApplicationSerializer
+    permission_classes = [IsSuperUser]
+    authentication_classes = [JWTAuthentication]
+    queryset = RoleApplication.objects.all().order_by("-created_at")
+
+    @extend_schema(
+        summary="List all role applications",
+        description="Get all role applications with pagination. Filter by status using ?status=pending",
+        responses={
+            200: RoleApplicationSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+        },
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Filter by status if provided
+        status_filter = request.query_params.get("status", None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Filter by role_type if provided
+        role_type_filter = request.query_params.get("role_type", None)
+        if role_type_filter:
+            queryset = queryset.filter(role_type=role_type_filter)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            data = self.get_serializer(page, many=True).data
+            result = {
+                "count": getattr(self.paginator.page.paginator, "count", len(data)),
+                "next": self.paginator.get_next_link(),
+                "previous": self.paginator.get_previous_link(),
+                "results": data,
+            }
+            return api_response(
+                result=result,
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        data = self.get_serializer(queryset, many=True).data
+        return api_response(
+            result=data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Get role application details",
+        description="Retrieve details of a specific role application.",
+        responses={
+            200: RoleApplicationSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="Application not found."),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Review role application",
+        description="Approve or reject a role application.",
+        request=RoleApplicationReviewSerializer,
+        responses={
+            200: RoleApplicationSerializer,
+            400: OpenApiResponse(
+                description="Validation error or application not pending."
+            ),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="Application not found."),
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="review")
+    def review(self, request, pk=None):
+        """Custom action to approve or reject an application"""
+
+        application = self.get_object()
+
+        if application.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"detail": "Only pending applications can be reviewed."},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = RoleApplicationReviewSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        action_type = serializer.validated_data["action"]
+        admin_notes = serializer.validated_data.get("admin_notes", "")
+
+        if action_type == "approve":
+            application.approve(request.user, admin_notes)
+            message = (
+                f"Application approved. {application.role_type} role assigned to user."
+            )
+        else:
+            application.reject(request.user, admin_notes)
+            message = "Application rejected."
+
+        result_serializer = RoleApplicationSerializer(application)
+
+        return api_response(
+            result={"message": message, "application": result_serializer.data},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["Reports"])
+class ReportViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for users to create and view their own reports.
+    Users can create reports and view their submitted reports.
+    """
+
+    serializer_class = ReportSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def get_queryset(self):
+        """Users can only see their own reports"""
+        return Report.objects.filter(user=self.request.user).order_by("-created_at")
+
+    @extend_schema(
+        summary="List my reports",
+        description="Get all reports submitted by the authenticated user.",
+        responses={
+            200: ReportSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+        },
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Get report details",
+        description="Retrieve details of a specific report.",
+        responses={
+            200: ReportSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Create a report",
+        description="Submit a new report to the admin.",
+        request=ReportSerializer,
+        responses={
+            201: ReportSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer.save()
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="Update report",
+        description="Update a pending report. Only pending reports can be updated.",
+        request=ReportSerializer,
+        responses={
+            200: ReportSerializer,
+            400: OpenApiResponse(description="Validation error or report not pending."),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"detail": "Only pending reports can be updated."},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Partial update report",
+        description="Partially update a pending report.",
+        request=ReportSerializer,
+        responses={
+            200: ReportSerializer,
+            400: OpenApiResponse(description="Validation error or report not pending."),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"detail": "Only pending reports can be updated."},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Delete report",
+        description="Delete a pending report.",
+        responses={
+            204: OpenApiResponse(description="Report deleted successfully."),
+            400: OpenApiResponse(description="Cannot delete non-pending report."),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"detail": "Only pending reports can be deleted."},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_destroy(instance)
+
+        return api_response(
+            result={"message": "Report deleted successfully."},
+            is_success=True,
+            status_code=status.HTTP_204_NO_CONTENT,
+        )
+
+
+@extend_schema(tags=["Admin - Reports"])
+class AdminReportViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for admins to view and manage all reports.
+    Only superusers can access these endpoints.
+    """
+
+    serializer_class = ReportAdminSerializer
+    permission_classes = [IsSuperUser]
+    authentication_classes = [JWTAuthentication]
+    queryset = Report.objects.all().order_by("-created_at")
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    @extend_schema(
+        summary="List all reports",
+        description="Get all reports submitted by users. Supports filtering.",
+        responses={
+            200: ReportAdminSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+        },
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Optional filtering by status
+        status_filter = request.query_params.get("status", None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        # Optional filtering by category
+        category_filter = request.query_params.get("category", None)
+        if category_filter:
+            queryset = queryset.filter(category=category_filter)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Get report details",
+        description="Retrieve details of a specific report.",
+        responses={
+            200: ReportAdminSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Update report",
+        description="Update a report's status or admin notes.",
+        request=ReportAdminSerializer,
+        responses={
+            200: ReportAdminSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Partial update report",
+        description="Partially update a report's status or admin notes.",
+        request=ReportAdminSerializer,
+        responses={
+            200: ReportAdminSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_update(serializer)
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Review a report",
+        description="Change report status (in_review, resolve, or close) with optional admin notes.",
+        request=ReportReviewSerializer,
+        responses={
+            200: ReportAdminSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="Report not found."),
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="review")
+    def review(self, request, pk=None):
+        """Custom action to change report status"""
+
+        report = self.get_object()
+
+        serializer = ReportReviewSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        action_type = serializer.validated_data["action"]
+        admin_notes = serializer.validated_data.get("admin_notes", "")
+
+        if action_type == "in_review":
+            report.mark_in_review(request.user)
+            message = "Report marked as in review."
+        elif action_type == "resolve":
+            report.resolve(request.user, admin_notes)
+            message = "Report resolved."
+        else:  # close
+            report.close(request.user, admin_notes)
+            message = "Report closed."
+
+        result_serializer = ReportAdminSerializer(report)
+
+        return api_response(
+            result={"message": message, "report": result_serializer.data},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
         )
