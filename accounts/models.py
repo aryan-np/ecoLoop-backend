@@ -222,17 +222,12 @@ class RoleApplication(models.Model):
     # Application details
     organization_name = models.CharField(max_length=255)
     registration_number = models.CharField(max_length=100, blank=True, null=True)
+    established_date = models.DateField(blank=True, null=True)
+
     address = models.TextField()
+
     description = models.TextField(
         help_text="Why you want this role and what you plan to do"
-    )
-
-    # Supporting documents
-    document = models.FileField(
-        upload_to="role_applications/",
-        blank=True,
-        null=True,
-        help_text="Upload registration certificate or related documents",
     )
 
     # Status tracking
@@ -262,6 +257,18 @@ class RoleApplication(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.role_type} Application ({self.status})"
+
+
+class RoleApplicationDocument(models.Model):
+    application = models.ForeignKey(
+        RoleApplication, on_delete=models.CASCADE, related_name="documents"
+    )
+    document = models.FileField(upload_to="role_applications/")
+
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Document for {self.application.user.email}"
 
 
 class Report(models.Model):

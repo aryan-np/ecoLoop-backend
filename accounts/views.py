@@ -8,6 +8,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
+from django.db.models import Exists, OuterRef, Q, Case, When, Value, BooleanField
+
 from loguru import logger
 
 from ecoLoop.utils import api_response
@@ -240,38 +242,10 @@ class RefreshTokenView(APIView):
 
 @extend_schema(tags=["User Profile"])
 class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = UserProfile.objects.select_related("user").all().order_by("-created_at")
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
-
-    def get_object(self):
-
-        queryset = self.get_queryset()
-        lookup_value = self.kwargs.get("pk")
-
-        if not lookup_value:
-            raise UserProfile.DoesNotExist("Profile not found")
-
-        # For retrieve action, lookup by user_id
-        if self.action == "retrieve":
-            try:
-                obj = queryset.get(user=lookup_value)
-                self.check_object_permissions(self.request, obj)
-                return obj
-            except UserProfile.DoesNotExist as e:
-                logger.error(f"UserProfile with user_id={lookup_value} does not exist")
-                raise
-
-        # For other actions (update, partial_update, destroy), lookup by profile id
-        try:
-            obj = queryset.get(id=lookup_value)
-            self.check_object_permissions(self.request, obj)
-            return obj
-        except UserProfile.DoesNotExist as e:
-            logger.error(f"UserProfile with id={lookup_value} does not exist")
-            raise
 
     @extend_schema(
         summary="List profiles",
@@ -405,29 +379,79 @@ class UserProfileViewSet(viewsets.ModelViewSet):
             status_code=status.HTTP_200_OK,
         )
 
-    @extend_schema(
-        summary="Delete profile",
-        description="Delete a user profile by profile ID. Only the owner or admins can delete. This will not delete the associated user account.",
-        responses={
-            204: OpenApiResponse(description="Profile deleted successfully."),
-            401: OpenApiResponse(description="Unauthorized."),
-            403: OpenApiResponse(description="Not allowed (not owner)."),
-            404: OpenApiResponse(description="Profile not found."),
-        },
-        tags=["User Profile"],
-    )
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        return api_response(
-            result={"message": "Deleted successfully."},
-            is_success=True,
-            status_code=status.HTTP_204_NO_CONTENT,
-        )
-
     def get_queryset(self):
         user = self.request.user
-        qs = UserProfile.objects.select_related("user").order_by("-created_at")
+
+        # Subquery to check if user has pending NGO application
+        has_pending_ngo = RoleApplication.objects.filter(
+            user=OuterRef("user"), role_type="NGO", status="pending"
+        )
+
+        # Subquery to check if user has pending RECYCLER application
+        has_pending_recycler = RoleApplication.objects.filter(
+            user=OuterRef("user"), role_type="RECYCLER", status="pending"
+        )
+
+        # Subquery to check if user has any NGO application (any status)
+        has_applied_ngo = RoleApplication.objects.filter(
+            user=OuterRef("user"), role_type="NGO"
+        )
+
+        # Subquery to check if user has any RECYCLER application (any status)
+        has_applied_recycler = RoleApplication.objects.filter(
+            user=OuterRef("user"), role_type="RECYCLER"
+        )
+
+        # Subquery to check if user has approved RECYCLER role
+        has_recycler_role = User.objects.filter(
+            id=OuterRef("user"), roles__name="RECYCLER"
+        )
+
+        # Subquery to check if user has approved NGO role
+        has_ngo_role = User.objects.filter(id=OuterRef("user"), roles__name="NGO")
+
+        qs = (
+            UserProfile.objects.select_related("user")
+            .filter(user=user)
+            .annotate(
+                can_apply_ngo=Case(
+                    # Can't apply for NGO if: any pending application OR already has RECYCLER role OR already has NGO role
+                    When(
+                        Q(Exists(has_pending_ngo))
+                        | Q(Exists(has_pending_recycler))
+                        | Q(Exists(has_recycler_role))
+                        | Q(Exists(has_ngo_role)),
+                        then=Value(False),
+                    ),
+                    default=Value(True),
+                    output_field=BooleanField(),
+                ),
+                can_apply_recycler=Case(
+                    # Can't apply for RECYCLER if: any pending application OR already has NGO role OR already has RECYCLER role
+                    When(
+                        Q(Exists(has_pending_ngo))
+                        | Q(Exists(has_pending_recycler))
+                        | Q(Exists(has_ngo_role))
+                        | Q(Exists(has_recycler_role)),
+                        then=Value(False),
+                    ),
+                    default=Value(True),
+                    output_field=BooleanField(),
+                ),
+                has_applied_ngo=Case(
+                    When(Exists(has_applied_ngo), then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                ),
+                has_applied_recycler=Case(
+                    When(Exists(has_applied_recycler), then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                ),
+            )
+            .order_by("-created_at")
+        )
+
         if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
             return qs.all()
         return qs.filter(user=user)
@@ -712,7 +736,6 @@ class RoleApplicationViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get_queryset(self):
-        """Users can only see their own applications"""
         return RoleApplication.objects.filter(user=self.request.user).order_by(
             "-created_at"
         )
@@ -728,24 +751,6 @@ class RoleApplicationViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
-        return api_response(
-            result=serializer.data,
-            is_success=True,
-            status_code=status.HTTP_200_OK,
-        )
-
-    @extend_schema(
-        summary="Get role application details",
-        description="Retrieve details of a specific role application.",
-        responses={
-            200: RoleApplicationSerializer,
-            401: OpenApiResponse(description="Unauthorized."),
-            404: OpenApiResponse(description="Application not found."),
-        },
-    )
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
         return api_response(
             result=serializer.data,
             is_success=True,
@@ -776,136 +781,23 @@ class RoleApplicationViewSet(viewsets.ModelViewSet):
         serializer.save()
 
         return api_response(
-            result=serializer.data,
+            result={"message": "Role application submitted successfully."},
             is_success=True,
             status_code=status.HTTP_201_CREATED,
-        )
-
-    @extend_schema(
-        summary="Update role application",
-        description="Update a pending role application. Only pending applications can be updated.",
-        request=RoleApplicationSerializer,
-        responses={
-            200: RoleApplicationSerializer,
-            400: OpenApiResponse(
-                description="Validation error or application not pending."
-            ),
-            401: OpenApiResponse(description="Unauthorized."),
-            404: OpenApiResponse(description="Application not found."),
-        },
-    )
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        if instance.status != "pending":
-            return api_response(
-                result=None,
-                is_success=False,
-                error_message={"detail": "Only pending applications can be updated."},
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = self.get_serializer(instance, data=request.data, partial=False)
-
-        if not serializer.is_valid():
-            return api_response(
-                result=None,
-                is_success=False,
-                error_message=serializer.errors,
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        self.perform_update(serializer)
-
-        return api_response(
-            result=serializer.data,
-            is_success=True,
-            status_code=status.HTTP_200_OK,
-        )
-
-    @extend_schema(
-        summary="Partial update role application",
-        description="Partially update a pending role application.",
-        request=RoleApplicationSerializer,
-        responses={
-            200: RoleApplicationSerializer,
-            400: OpenApiResponse(
-                description="Validation error or application not pending."
-            ),
-            401: OpenApiResponse(description="Unauthorized."),
-            404: OpenApiResponse(description="Application not found."),
-        },
-    )
-    def partial_update(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        if instance.status != "pending":
-            return api_response(
-                result=None,
-                is_success=False,
-                error_message={"detail": "Only pending applications can be updated."},
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-
-        if not serializer.is_valid():
-            return api_response(
-                result=None,
-                is_success=False,
-                error_message=serializer.errors,
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        self.perform_update(serializer)
-
-        return api_response(
-            result=serializer.data,
-            is_success=True,
-            status_code=status.HTTP_200_OK,
-        )
-
-    @extend_schema(
-        summary="Delete role application",
-        description="Delete a pending role application.",
-        responses={
-            204: OpenApiResponse(description="Application deleted successfully."),
-            400: OpenApiResponse(description="Cannot delete non-pending application."),
-            401: OpenApiResponse(description="Unauthorized."),
-            404: OpenApiResponse(description="Application not found."),
-        },
-    )
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        if instance.status != "pending":
-            return api_response(
-                result=None,
-                is_success=False,
-                error_message={"detail": "Only pending applications can be deleted."},
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        self.perform_destroy(instance)
-
-        return api_response(
-            result={"message": "Application deleted successfully."},
-            is_success=True,
-            status_code=status.HTTP_204_NO_CONTENT,
         )
 
 
 @extend_schema(tags=["Admin - Role Applications"])
 class AdminRoleApplicationViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for admins to view and review role applications.
-    Only superusers can access these endpoints.
-    """
 
     serializer_class = RoleApplicationSerializer
     permission_classes = [IsSuperUser]
     authentication_classes = [JWTAuthentication]
-    queryset = RoleApplication.objects.all().order_by("-created_at")
+    queryset = (
+        RoleApplication.objects.all()
+        .order_by("-created_at")
+        .select_related("user", "reviewed_by")
+    )
 
     @extend_schema(
         summary="List all role applications",
@@ -971,34 +863,28 @@ class AdminRoleApplicationViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
     @extend_schema(
-        summary="Review role application",
-        description="Approve or reject a role application.",
+        summary="Review role application (Approve/Reject)",
+        description="Approve or reject a role application. Approving will assign the role to the user.",
         request=RoleApplicationReviewSerializer,
         responses={
             200: RoleApplicationSerializer,
             400: OpenApiResponse(
-                description="Validation error or application not pending."
+                description="Validation error or application already reviewed."
             ),
             401: OpenApiResponse(description="Unauthorized."),
             403: OpenApiResponse(description="Forbidden. Superuser access required."),
             404: OpenApiResponse(description="Application not found."),
         },
     )
-    @action(detail=True, methods=["post"], url_path="review")
+    @action(
+        detail=True, methods=["patch"], serializer_class=RoleApplicationReviewSerializer
+    )
     def review(self, request, pk=None):
-        """Custom action to approve or reject an application"""
-
-        application = self.get_object()
-
-        if application.status != "pending":
-            return api_response(
-                result=None,
-                is_success=False,
-                error_message={"detail": "Only pending applications can be reviewed."},
-                status_code=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = RoleApplicationReviewSerializer(data=request.data)
+        """Review (approve/reject) a role application"""
+        instance = self.get_object()
+        serializer = RoleApplicationReviewSerializer(
+            instance, data=request.data, context={"request": request}
+        )
 
         if not serializer.is_valid():
             return api_response(
@@ -1008,25 +894,21 @@ class AdminRoleApplicationViewSet(viewsets.ReadOnlyModelViewSet):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        action_type = serializer.validated_data["action"]
-        admin_notes = serializer.validated_data.get("admin_notes", "")
-
-        if action_type == "approve":
-            application.approve(request.user, admin_notes)
-            message = (
-                f"Application approved. {application.role_type} role assigned to user."
+        try:
+            updated_application = serializer.save()
+            result_serializer = RoleApplicationSerializer(updated_application)
+            return api_response(
+                result=result_serializer.data,
+                is_success=True,
+                status_code=status.HTTP_200_OK,
             )
-        else:
-            application.reject(request.user, admin_notes)
-            message = "Application rejected."
-
-        result_serializer = RoleApplicationSerializer(application)
-
-        return api_response(
-            result={"message": message, "application": result_serializer.data},
-            is_success=True,
-            status_code=status.HTTP_200_OK,
-        )
+        except serializers.ValidationError as e:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=str(e),
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 @extend_schema(tags=["Reports"])

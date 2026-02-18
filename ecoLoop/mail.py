@@ -57,3 +57,24 @@ Best regards,
 Eco Loop Team"""
 
     send_email(email, subject, message)
+
+
+def send_role_application_approved(email: str, full_name: str, role_type: str):
+    """Send notification when role application is approved."""
+    subject = f"Your {role_type} Application Has Been Approved!"
+    message = f"""Hello {full_name},
+
+Congratulations! Your application for the {role_type} role has been approved.
+
+To access your new dashboard and features, please:
+1. Logout from your current session
+2. Sign in again
+
+This will refresh your permissions and give you access to all {role_type} features.
+
+Thank you for joining Eco Loop!
+
+Best regards,
+Eco Loop Team"""
+
+    send_email(email, subject, message)

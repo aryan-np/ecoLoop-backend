@@ -14,6 +14,7 @@ from accounts.models import (
     OTPVerification,
     PendingRegistration,
     RoleApplication,
+    RoleApplicationDocument,
     Report,
 )
 from accounts.otp import generate_otp, hash_otp, verify_otp
@@ -21,6 +22,7 @@ from ecoLoop.mail import (
     send_login_otp,
     send_registration_otp,
     send_password_reset_otp,
+    send_role_application_approved,
 )
 
 
@@ -462,6 +464,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
     )
     profile_picture = serializers.ImageField(required=False, allow_null=True)
     roles = serializers.SerializerMethodField()
+    can_apply_ngo = serializers.BooleanField(read_only=True)
+    can_apply_recycler = serializers.BooleanField(read_only=True)
+    has_applied_ngo = serializers.BooleanField(read_only=True)
+    has_applied_recycler = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = UserProfile
@@ -480,10 +486,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "bio",
             "is_email_verified",
             "is_phone_verified",
+            "can_apply_ngo",
+            "can_apply_recycler",
+            "has_applied_ngo",
+            "has_applied_recycler",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "latitude", "longitude"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "latitude",
+            "longitude",
+            "can_apply_ngo",
+            "can_apply_recycler",
+            "has_applied_ngo",
+            "has_applied_recycler",
+        ]
 
     def get_roles(self, obj):
         """Return list of role names and descriptions."""
@@ -516,23 +536,40 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
+class RoleApplicationDocumentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RoleApplicationDocument
+        fields = ["id", "document", "uploaded_at"]
+        read_only_fields = ["id", "uploaded_at"]
+
+
 class RoleApplicationSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
-    user_details = serializers.SerializerMethodField(read_only=True)
+    applicant = serializers.SerializerMethodField(read_only=True)
     reviewed_by_details = serializers.SerializerMethodField(read_only=True)
+    documents = RoleApplicationDocumentSerializer(many=True, read_only=True)
+    document_files = serializers.ListField(
+        child=serializers.FileField(),
+        write_only=True,
+        required=False,
+        help_text="Upload multiple documents for the application",
+    )
 
     class Meta:
         model = RoleApplication
         fields = [
             "id",
             "user",
-            "user_details",
+            "applicant",
             "role_type",
             "organization_name",
             "registration_number",
+            "established_date",
             "address",
             "description",
-            "document",
+            "documents",
+            "document_files",
             "status",
             "admin_notes",
             "reviewed_by",
@@ -544,7 +581,8 @@ class RoleApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "user",
-            "user_details",
+            "applicant",
+            "documents",
             "status",
             "admin_notes",
             "reviewed_by",
@@ -554,7 +592,8 @@ class RoleApplicationSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_user_details(self, obj):
+    def get_applicant(self, obj):
+        """Return detailed information about the user who applied"""
         return {
             "id": str(obj.user.id),
             "email": obj.user.email,
@@ -563,6 +602,7 @@ class RoleApplicationSerializer(serializers.ModelSerializer):
         }
 
     def get_reviewed_by_details(self, obj):
+        """Return detailed information about the admin who reviewed"""
         if obj.reviewed_by:
             return {
                 "id": str(obj.reviewed_by.id),
@@ -590,8 +630,43 @@ class RoleApplicationSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        # Extract document-related fields
+        document_files = validated_data.pop("document_files", [])
+
+        # Set user from request context
         validated_data["user"] = self.context["request"].user
-        return super().create(validated_data)
+
+        # Create the application
+        with transaction.atomic():
+            application = super().create(validated_data)
+
+            # Create associated documents
+            if document_files:
+                for doc_file in document_files:
+                    RoleApplicationDocument.objects.create(
+                        application=application,
+                        document=doc_file,
+                    )
+
+        return application
+
+    def update(self, instance, validated_data):
+        # Extract document-related fields
+        document_files = validated_data.pop("document_files", [])
+
+        # Update the application
+        with transaction.atomic():
+            application = super().update(instance, validated_data)
+
+            # Add new documents (don't delete existing ones)
+            if document_files:
+                for doc_file in document_files:
+                    RoleApplicationDocument.objects.create(
+                        application=application,
+                        document=doc_file,
+                    )
+
+        return application
 
 
 class RoleApplicationReviewSerializer(serializers.Serializer):
@@ -606,6 +681,57 @@ class RoleApplicationReviewSerializer(serializers.Serializer):
                 "Admin notes are required when rejecting an application."
             )
         return data
+
+    def update(self, instance, validated_data):
+        """Update the role application status and handle role assignment"""
+        action = validated_data.get("action")
+        admin_notes = validated_data.get("admin_notes", "")
+        admin_user = self.context["request"].user
+
+        # Check if application is already reviewed
+        if instance.status != "pending":
+            raise serializers.ValidationError(
+                f"Cannot review application. Current status: {instance.status}"
+            )
+
+        with transaction.atomic():
+            if action == "approve":
+                # Set status to approved
+                instance.status = "approved"
+                instance.admin_notes = admin_notes
+                instance.reviewed_by = admin_user
+                instance.reviewed_at = timezone.now()
+                instance.save()
+
+                # Assign the role to the user
+                role, created = Role.objects.get_or_create(
+                    name=instance.role_type,
+                    defaults={
+                        "description": f"{instance.role_type} role",
+                        "single_assignment": instance.role_type == "NGO",
+                    },
+                )
+                instance.user.roles.add(role)
+
+                # Send approval email notification
+                try:
+                    send_role_application_approved(
+                        email=instance.user.email,
+                        full_name=instance.user.full_name,
+                        role_type=instance.role_type,
+                    )
+                except Exception as e:
+                    pass
+
+            elif action == "reject":
+                # Set status to rejected
+                instance.status = "rejected"
+                instance.admin_notes = admin_notes
+                instance.reviewed_by = admin_user
+                instance.reviewed_at = timezone.now()
+                instance.save()
+
+        return instance
 
 
 class ReportSerializer(serializers.ModelSerializer):
