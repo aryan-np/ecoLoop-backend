@@ -16,6 +16,7 @@ from accounts.models import (
     RoleApplication,
     RoleApplicationDocument,
     Report,
+    AdminActivityLog,
 )
 from accounts.otp import generate_otp, hash_otp, verify_otp
 from ecoLoop.mail import (
@@ -25,6 +26,7 @@ from ecoLoop.mail import (
     send_role_application_approved,
 )
 
+from ecoLoop.utils import log_admin_action
 
 MAX_ATTEMPTS = 5
 
@@ -712,6 +714,14 @@ class RoleApplicationReviewSerializer(serializers.Serializer):
                     },
                 )
                 instance.user.roles.add(role)
+                log_admin_action(
+                    admin=admin_user,
+                    action=f"application_approved",
+                    target_type="RoleApplication",
+                    target_id=str(instance.id),
+                    target_name=f"{instance.user.full_name} - {instance.role_type}",
+                    reason=admin_notes,
+                )
 
                 # Send approval email notification
                 try:
@@ -730,6 +740,14 @@ class RoleApplicationReviewSerializer(serializers.Serializer):
                 instance.reviewed_by = admin_user
                 instance.reviewed_at = timezone.now()
                 instance.save()
+                log_admin_action(
+                    admin=admin_user,
+                    action=f"application_rejected",
+                    target_type="RoleApplication",
+                    target_id=str(instance.id),
+                    target_name=f"{instance.user.full_name} - {instance.role_type}",
+                    reason=admin_notes,
+                )
 
         return instance
 
@@ -872,3 +890,109 @@ class ReportReviewSerializer(serializers.Serializer):
         choices=["in_review", "resolve", "close"], required=True
     )
     admin_notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class AdminActivityLogSerializer(serializers.ModelSerializer):
+    """Serializer for viewing admin activity logs"""
+
+    admin_name = serializers.CharField(source="admin.full_name", read_only=True)
+    admin_email = serializers.CharField(source="admin.email", read_only=True)
+    action_display = serializers.CharField(source="get_action_display", read_only=True)
+    result_display = serializers.CharField(source="get_result_display", read_only=True)
+
+    class Meta:
+        model = AdminActivityLog
+        fields = [
+            "id",
+            "admin",
+            "admin_name",
+            "admin_email",
+            "action",
+            "action_display",
+            "target_type",
+            "target_id",
+            "target_name",
+            "result",
+            "result_display",
+            "reason",
+            "timestamp",
+        ]
+        read_only_fields = ["id", "timestamp"]
+
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """Serializer for admin to manage users - allows blocking/unblocking"""
+
+    roles = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "phone_number",
+            "roles",
+            "is_active",
+            "is_email_verified",
+            "is_phone_verified",
+            "date_joined",
+        ]
+        read_only_fields = ["id", "email", "date_joined"]
+
+    def get_roles(self, obj):
+        """Return list of role names and descriptions."""
+        return [
+            {
+                "id": role.id,
+                "name": role.name,
+                "description": role.description,
+            }
+            for role in obj.roles.all()
+        ]
+
+    def update(self, instance, validated_data):
+        """Update user and log blocking/unblocking actions"""
+        request = self.context.get("request")
+        
+        # Check if is_active is being changed
+        if "is_active" in validated_data:
+            old_is_active = instance.is_active
+            new_is_active = validated_data["is_active"]
+            
+            # Only log if there's an actual change
+            if old_is_active != new_is_active:
+                # Update the instance first
+                instance = super().update(instance, validated_data)
+                
+                # Log the action
+                if new_is_active is False:
+                    # User was blocked
+                    action = "user_blocked"
+                    details = f"User {instance.email} has been blocked"
+                else:
+                    # User was unblocked
+                    action = "user_unblocked"
+                    details = f"User {instance.email} has been unblocked"
+                
+                # Get reason from request data if provided
+                reason = None
+                if request and hasattr(request, "data"):
+                    reason = request.data.get("reason", None)
+                
+                # Log the admin action
+                if request and hasattr(request, "user"):
+                    log_admin_action(
+                        admin=request.user,
+                        action=action,
+                        target_type="User",
+                        target_id=str(instance.id),
+                        target_name=f"{instance.full_name} (ID: {instance.id})",
+                        result="success",
+                        reason=reason,
+                    )
+                
+                return instance
+        
+        # If is_active wasn't changed, just do normal update
+        return super().update(instance, validated_data)

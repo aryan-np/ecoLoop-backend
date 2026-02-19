@@ -57,3 +57,25 @@ class RoleApplicationAdmin(admin.ModelAdmin):
 
 admin.site.register(models.RoleApplication, RoleApplicationAdmin)
 admin.site.register(models.RoleApplicationDocument)
+
+
+class AdminActivityLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "admin",
+        "action",
+        "target_type",
+        "target_name",
+        "result",
+        "timestamp",
+    )
+    search_fields = ("admin__email", "admin__full_name", "target_name", "action")
+    list_filter = ("action", "result", "target_type", "timestamp")
+    ordering = ("-timestamp",)
+    readonly_fields = ("id", "timestamp")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("admin")
+
+
+admin.site.register(models.AdminActivityLog, AdminActivityLogAdmin)

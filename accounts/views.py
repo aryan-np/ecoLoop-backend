@@ -25,8 +25,10 @@ from accounts.serializers import (
     ReportSerializer,
     ReportAdminSerializer,
     ReportReviewSerializer,
+    AdminActivityLogSerializer,
+    AdminUserSerializer,
 )
-from .models import UserProfile, User, RoleApplication, Report
+from .models import UserProfile, User, RoleApplication, Report, AdminActivityLog
 from .serializers import UserProfileSerializer
 from .permissions import IsOwnerOrReadOnly, IsSuperUser, IsOwnerOrAdmin
 
@@ -641,9 +643,9 @@ class UserViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="Update user (full)",
         description="Fully update a user account. Only accessible to superusers.",
-        request=UserSerializer,
+        request=AdminUserSerializer,
         responses={
-            200: UserSerializer,
+            200: AdminUserSerializer,
             400: OpenApiResponse(description="Validation error."),
             401: OpenApiResponse(description="Unauthorized."),
             403: OpenApiResponse(description="Forbidden. Superuser access required."),
@@ -652,7 +654,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=False)
+        serializer = AdminUserSerializer(instance, data=request.data, partial=False, context={'request': request})
 
         if not serializer.is_valid():
             return api_response(
@@ -672,10 +674,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Update user (partial)",
-        description="Partially update a user account. Only accessible to superusers.",
-        request=UserSerializer,
+        description="Partially update a user account. Can block/unblock users by setting is_active. Provide optional 'reason' field for logging. Only accessible to superusers.",
+        request=AdminUserSerializer,
         responses={
-            200: UserSerializer,
+            200: AdminUserSerializer,
             400: OpenApiResponse(description="Validation error."),
             401: OpenApiResponse(description="Unauthorized."),
             403: OpenApiResponse(description="Forbidden. Superuser access required."),
@@ -684,7 +686,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer = AdminUserSerializer(instance, data=request.data, partial=True, context={'request': request})
 
         if not serializer.is_valid():
             return api_response(
@@ -1146,6 +1148,156 @@ class AdminReportViewSet(viewsets.ModelViewSet):
 
         self.perform_update(serializer)
 
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class AdminActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for viewing admin activity logs.
+    Only superusers can access this.
+    """
+
+    queryset = AdminActivityLog.objects.select_related("admin").all()
+    serializer_class = AdminActivityLogSerializer
+    permission_classes = [IsAuthenticated, IsSuperUser]
+    authentication_classes = [JWTAuthentication]
+
+    @extend_schema(
+        tags=["Admin Logs"],
+        summary="List admin activity logs",
+        description="Retrieve a paginated list of all admin activity logs. Only accessible by superusers.",
+        responses={
+            200: AdminActivityLogSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+        },
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Optional filters
+        action = request.query_params.get("action", None)
+        admin_id = request.query_params.get("admin_id", None)
+        target_type = request.query_params.get("target_type", None)
+        result = request.query_params.get("result", None)
+        date_from = request.query_params.get("date_from", None)
+        date_to = request.query_params.get("date_to", None)
+
+        if action:
+            queryset = queryset.filter(action=action)
+        if admin_id:
+            queryset = queryset.filter(admin_id=admin_id)
+        if target_type:
+            queryset = queryset.filter(target_type=target_type)
+        if result:
+            queryset = queryset.filter(result=result)
+        if date_from:
+            queryset = queryset.filter(timestamp__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(timestamp__lte=date_to)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        tags=["Admin Logs"],
+        summary="Retrieve admin activity log details",
+        description="Get detailed information about a specific admin activity log entry.",
+        responses={
+            200: AdminActivityLogSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+            404: OpenApiResponse(description="Log entry not found."),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        tags=["Admin Logs"],
+        summary="Get logs by admin",
+        description="Retrieve all activity logs for a specific admin user.",
+        responses={
+            200: AdminActivityLogSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="by-admin")
+    def by_admin(self, request):
+        """Get all logs filtered by admin_id query parameter"""
+        admin_id = request.query_params.get("admin_id")
+        if not admin_id:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="admin_id query parameter is required",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        logs = self.queryset.filter(admin_id=admin_id)
+        page = self.paginate_queryset(logs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(logs, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        tags=["Admin Logs"],
+        summary="Get logs by target",
+        description="Retrieve all admin activity logs for a specific target entity.",
+        responses={
+            200: AdminActivityLogSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+            403: OpenApiResponse(description="Forbidden. Superuser access required."),
+        },
+    )
+    @action(detail=False, methods=["get"], url_path="by-target")
+    def by_target(self, request):
+        """Get all logs for a specific target entity"""
+        target_type = request.query_params.get("target_type")
+        target_id = request.query_params.get("target_id")
+
+        if not target_type or not target_id:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="target_type and target_id query parameters are required",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        logs = self.queryset.filter(target_type=target_type, target_id=target_id)
+        page = self.paginate_queryset(logs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(logs, many=True)
         return api_response(
             result=serializer.data,
             is_success=True,

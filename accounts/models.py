@@ -346,3 +346,66 @@ class Report(models.Model):
 
     def __str__(self):
         return f"Report #{self.id.hex[:8]} - {self.subject} ({self.status})"
+
+
+class AdminActivityLog(models.Model):
+    """Tracks all administrative actions performed on the platform"""
+
+    ACTION_CHOICES = [
+        ("user_blocked", "Blocked User"),
+        ("user_unblocked", "Unblocked User"),
+        ("user_role_changed", "Changed User Role"),
+        ("application_approved", "Approved Role Application"),
+        ("application_rejected", "Rejected Role Application"),
+        ("listing_removed", "Removed Listing"),
+        ("listing_restored", "Restored Listing"),
+        ("report_resolved", "Resolved Report"),
+        ("dispute_resolved", "Resolved Dispute"),
+        ("other", "Other Action"),
+    ]
+
+    RESULT_CHOICES = [
+        ("success", "Success"),
+        ("failed", "Failed"),
+        ("pending", "Pending"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Who performed the action (admin)
+    admin = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="admin_activities"
+    )
+
+    # What action was performed
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+
+    # Target entity information
+    target_type = models.CharField(
+        max_length=50, help_text="Type of entity (User, Listing, NGO, etc.)"
+    )
+    target_id = models.CharField(max_length=255, help_text="ID of the target entity")
+    target_name = models.CharField(
+        max_length=255, help_text="Name/description of the target"
+    )
+
+    # Result
+    result = models.CharField(max_length=20, choices=RESULT_CHOICES, default="success")
+
+    reason = models.TextField(blank=True, null=True, help_text="Reason for the action")
+
+    # Metadata
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["-timestamp"]),
+            models.Index(fields=["admin", "-timestamp"]),
+            models.Index(fields=["action", "-timestamp"]),
+            models.Index(fields=["target_type", "target_id"]),
+        ]
+
+    def __str__(self):
+        admin_name = self.admin.full_name if self.admin else "System"
+        return f"{admin_name} - {self.get_action_display()} - {self.target_name}"

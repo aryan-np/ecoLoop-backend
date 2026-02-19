@@ -12,6 +12,7 @@ from accounts.views import (
     AdminRoleApplicationViewSet,
     ReportViewSet,
     AdminReportViewSet,
+    AdminActivityLogViewSet,
 )
 
 router = DefaultRouter()
@@ -27,6 +28,9 @@ router.register(
 )
 router.register(r"reports", ReportViewSet, basename="reports")
 router.register(r"admin/reports", AdminReportViewSet, basename="admin-reports")
+router.register(
+    r"admin/activity-logs", AdminActivityLogViewSet, basename="admin-activity-logs"
+)
 
 urlpatterns = [
     path("register/", UserRegistrationView.as_view(), name="user-register"),
