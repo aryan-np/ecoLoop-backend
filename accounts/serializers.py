@@ -636,7 +636,8 @@ class RoleApplicationSerializer(serializers.ModelSerializer):
         document_files = validated_data.pop("document_files", [])
 
         # Set user from request context
-        validated_data["user"] = self.context["request"].user
+        user = self.context["request"].user
+        validated_data["user"] = user
 
         # Create the application
         with transaction.atomic():
@@ -954,17 +955,17 @@ class AdminUserSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update user and log blocking/unblocking actions"""
         request = self.context.get("request")
-        
+
         # Check if is_active is being changed
         if "is_active" in validated_data:
             old_is_active = instance.is_active
             new_is_active = validated_data["is_active"]
-            
+
             # Only log if there's an actual change
             if old_is_active != new_is_active:
                 # Update the instance first
                 instance = super().update(instance, validated_data)
-                
+
                 # Log the action
                 if new_is_active is False:
                     # User was blocked
@@ -974,12 +975,12 @@ class AdminUserSerializer(serializers.ModelSerializer):
                     # User was unblocked
                     action = "user_unblocked"
                     details = f"User {instance.email} has been unblocked"
-                
+
                 # Get reason from request data if provided
                 reason = None
                 if request and hasattr(request, "data"):
                     reason = request.data.get("reason", None)
-                
+
                 # Log the admin action
                 if request and hasattr(request, "user"):
                     log_admin_action(
@@ -991,8 +992,8 @@ class AdminUserSerializer(serializers.ModelSerializer):
                         result="success",
                         reason=reason,
                     )
-                
+
                 return instance
-        
+
         # If is_active wasn't changed, just do normal update
         return super().update(instance, validated_data)

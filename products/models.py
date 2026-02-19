@@ -26,17 +26,9 @@ class Condition(models.Model):
 
 
 class Product(models.Model):
-    PRODUCT_TYPE_CHOICES = [
-        ("sell", "Sell"),
-        ("donation", "Donation"),
-        ("scrap", "Scrap"),
-    ]
-
     STATUS_CHOICES = [
         ("available", "Available"),
         ("sold", "Sold"),
-        ("recycled", "Recycled"),
-        ("donated", "Donated"),
     ]
 
     owner = models.ForeignKey(
@@ -61,12 +53,6 @@ class Product(models.Model):
 
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
-    product_type = models.CharField(
-        max_length=20,
-        choices=PRODUCT_TYPE_CHOICES,
-        default="sell",
-    )
-
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -75,6 +61,12 @@ class Product(models.Model):
 
     # Location fields
     location = models.CharField(max_length=80, blank=True, null=True)
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True
+    )
 
     is_active = models.BooleanField(default=True)
 

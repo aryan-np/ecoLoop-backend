@@ -98,8 +98,9 @@ class ProductSerializer(serializers.ModelSerializer):
             "condition",
             "condition_id",
             "price",
-            "product_type",
             "location",
+            "latitude",
+            "longitude",
             "is_active",
             "created_at",
             "updated_at",
@@ -112,7 +113,6 @@ class ProductSerializer(serializers.ModelSerializer):
             "owner_address1",
             "owner_address2",
             "is_owner",
-            "product_type",
             "created_at",
             "updated_at",
         ]
@@ -125,7 +125,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         uploaded_images = validated_data.pop("uploaded_images", [])
-        print("Uploaded images:", uploaded_images)
         product = Product.objects.create(**validated_data)
 
         # Create ProductImage instances for each uploaded image

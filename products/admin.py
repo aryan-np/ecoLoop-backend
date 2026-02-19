@@ -10,7 +10,6 @@ class ProductAdmin(admin.ModelAdmin):
         "owner",
         "category",
         "condition",
-        "product_type",
         "status",
         "price",
         "is_active",
@@ -18,7 +17,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
     search_fields = ("title", "owner__email", "category__name")
     list_filter = (
-        "product_type",
+
         "status",
         "category",
         "condition",
@@ -36,7 +35,7 @@ class ProductAdmin(admin.ModelAdmin):
                 "fields": (
                     "category",
                     "condition",
-                    "product_type",
+
                     "status",
                     "price",
                     "location",

@@ -22,6 +22,10 @@ from .serializers import (
 from .filters import ProductStatusFilter
 from accounts.permissions import IsOwnerOrReadOnlyProduct
 from ecoLoop.utils import api_response
+from recycle.models import ScrapRequest
+from recycle.serializers import ScrapRequestSerializer
+from donations.models import DonationRequest
+from donations.serializers import DonationRequestSerializer
 
 
 @extend_schema_view(
@@ -160,11 +164,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         return ProductSerializer
 
     def get_queryset(self):
-        # Only return products with type "sell" (status filter applied separately)
+        # Return all products that are active and available
 
         return (
             Product.objects.filter(
-                is_active=True, product_type="sell", status="available"
+                is_active=True, status="available"
             )
             .select_related("owner", "category", "condition")
             .prefetch_related("images")
@@ -172,8 +176,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        # Always set product_type to "sell" when creating
-        serializer.save(owner=self.request.user, product_type="sell")
+        # Save product with authenticated user as owner
+        serializer.save(owner=self.request.user)
 
     @extend_schema(
         summary="List sell products",
@@ -340,49 +344,47 @@ class ProductViewSet(viewsets.ModelViewSet):
 @extend_schema(tags=["Product"])
 @extend_schema_view(
     list=extend_schema(
-        summary="List owner's sell products",
-        description="Retrieve all products owned by the authenticated user. Requires authentication.",
-        responses={200: ProductSerializer(many=True)},
-    ),
-    retrieve=extend_schema(
-        summary="Get owner's product detail",
-        description="Retrieve a specific product owned by the authenticated user. Requires authentication.",
-        responses={
-            200: ProductSerializer,
-            404: OpenApiResponse(description="Product not found."),
-        },
+        summary="List owner's all items",
+        description="Retrieve all items owned by the authenticated user (products, scrap requests, and donation requests). Requires authentication.",
+        responses={200: OpenApiResponse(description="Combined list of products, scrap requests, and donation requests")},
     ),
 )
 class GetOwnerProductsViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
-    parser_classes = (MultiPartParser, FormParser, JSONParser)
-    lookup_field = "id"
-    filterset_class = ProductStatusFilter
-    filter_backends = [DjangoFilterBackend]
-
-    def get_queryset(self):
-        return (
-            Product.objects.filter(owner=self.request.user)
-            .select_related("owner", "category", "condition")
-            .order_by("-created_at")
-        )
+    http_method_names = ['get']  # Only allow GET requests
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True)
+        # Get all products
+        products = Product.objects.filter(owner=request.user).select_related("owner", "category", "condition").prefetch_related("images").order_by("-created_at")
+        product_data = ProductSerializer(products, many=True, context={'request': request}).data
+        
+        # Get all scrap requests
+        scrap_requests = ScrapRequest.objects.filter(user=request.user).select_related("user", "category").order_by("-request_date")
+        scrap_data = ScrapRequestSerializer(scrap_requests, many=True, context={'request': request}).data
+        
+        # Get all donation requests
+        donation_requests = DonationRequest.objects.filter(user=request.user).select_related("user", "category", "condition").order_by("-request_date")
+        donation_data = DonationRequestSerializer(donation_requests, many=True, context={'request': request}).data
+        
+        # Add type identifier to each item
+        for item in product_data:
+            item['item_type'] = 'product'
+        for item in scrap_data:
+            item['item_type'] = 'scrap'
+        for item in donation_data:
+            item['item_type'] = 'donation'
+        
+        # Combine all items
+        result = {
+            "products": product_data,
+            "scrap_requests": scrap_data,
+            "donation_requests": donation_data,
+            "total_count": len(product_data) + len(scrap_data) + len(donation_data)
+        }
+        
         return api_response(
-            result=serializer.data,
-            is_success=True,
-            status_code=status.HTTP_200_OK,
-        )
-
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return api_response(
-            result=serializer.data,
+            result=result,
             is_success=True,
             status_code=status.HTTP_200_OK,
         )
@@ -401,7 +403,7 @@ class GetUserProductsView(generics.ListAPIView):
         return (
             Product.objects.filter(
                 owner=user_id,
-                product_type="sell",
+
                 is_active=True,
                 status="available",
             )

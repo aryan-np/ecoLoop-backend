@@ -33,6 +33,12 @@ class ScrapRequest(models.Model):
     request_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=50, default="Pending")
     pickup_address = models.TextField()
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, blank=True, null=True
+    )
     preferred_time_slot = models.CharField(max_length=20, choices=TIME_SLOT_CHOICES)
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES)
 
