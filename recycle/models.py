@@ -44,3 +44,16 @@ class ScrapRequest(models.Model):
 
     def __str__(self):
         return f"Scrap Request by {self.user.username} for {self.category.material_type} ({self.weight_kg} kg)"
+
+
+class ScrapImage(models.Model):
+    scrap = models.ForeignKey(
+        ScrapRequest,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(upload_to="scraps/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image for scrap {self.scrap.id} uploaded at {self.uploaded_at}"

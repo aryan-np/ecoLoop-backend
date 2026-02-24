@@ -40,3 +40,16 @@ class DonationRequest(models.Model):
 
     def __str__(self):
         return f"Donation Request by {self.user.username} for {self.category.name} in {self.condition.name} condition"
+
+
+class DonationImage(models.Model):
+    donation = models.ForeignKey(
+        DonationRequest,
+        on_delete=models.CASCADE,
+        related_name="images",
+    )
+    image = models.ImageField(upload_to="donations/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Image for donation {self.donation.id} uploaded at {self.uploaded_at}"

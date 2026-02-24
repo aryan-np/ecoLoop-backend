@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import DonationCategory, DonationCondition, DonationRequest
+from .models import DonationCategory, DonationCondition, DonationRequest, DonationImage
 
 
 class DonationCategorySerializer(serializers.ModelSerializer):
@@ -14,6 +14,13 @@ class DonationConditionSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "description"]
 
 
+class DonationImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DonationImage
+        fields = ["id", "image", "uploaded_at"]
+        read_only_fields = ["id", "uploaded_at"]
+
+
 class DonationRequestSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     request_date = serializers.DateTimeField(read_only=True)
@@ -21,10 +28,14 @@ class DonationRequestSerializer(serializers.ModelSerializer):
     category_details = DonationCategorySerializer(source="category", read_only=True)
     condition_details = DonationConditionSerializer(source="condition", read_only=True)
 
-    # Map-related fields
-    map_preview_url = serializers.SerializerMethodField()
-    google_maps_url = serializers.SerializerMethodField()
-    has_location = serializers.SerializerMethodField()
+    # Multiple images support
+    images = DonationImageSerializer(many=True, read_only=True)
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+    )
+
 
     class Meta:
         model = DonationRequest
@@ -40,31 +51,17 @@ class DonationRequestSerializer(serializers.ModelSerializer):
             "pickup_address",
             "latitude",
             "longitude",
-            "has_location",
-            "map_preview_url",
-            "google_maps_url",
             "request_date",
             "status",
+            "images",
+            "uploaded_images",
         ]
 
-    def get_has_location(self, obj):
-        """Check if request has valid location coordinates"""
-        return obj.latitude is not None and obj.longitude is not None
-
-    def get_map_preview_url(self, obj):
-        """Generate Google Maps Static API URL for map preview"""
-        if obj.latitude and obj.longitude:
-            base_url = "https://maps.googleapis.com/maps/api/staticmap"
-            params = f"?center={obj.latitude},{obj.longitude}&zoom=15&size=600x300&markers=color:red%7C{obj.latitude},{obj.longitude}"
-            return base_url + params
-        return None
-
-    def get_google_maps_url(self, obj):
-        """Generate Google Maps URL for 'Open in Maps' functionality"""
-        if obj.latitude and obj.longitude:
-            return f"https://www.google.com/maps/dir/?api=1&destination={obj.latitude},{obj.longitude}"
-        return None
-
     def create(self, validated_data):
+        uploaded_images = validated_data.pop("uploaded_images", [])
         request = DonationRequest.objects.create(**validated_data)
+        # Create DonationImage instances for each uploaded image
+        for image in uploaded_images:
+            DonationImage.objects.create(donation=request, image=image)
+
         return request

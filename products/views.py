@@ -360,11 +360,11 @@ class GetOwnerProductsViewSet(viewsets.ReadOnlyModelViewSet):
         product_data = ProductSerializer(products, many=True, context={'request': request}).data
         
         # Get all scrap requests
-        scrap_requests = ScrapRequest.objects.filter(user=request.user).select_related("user", "category").order_by("-request_date")
+        scrap_requests = ScrapRequest.objects.filter(user=request.user).select_related("user", "category").prefetch_related("images").order_by("-request_date")
         scrap_data = ScrapRequestSerializer(scrap_requests, many=True, context={'request': request}).data
         
         # Get all donation requests
-        donation_requests = DonationRequest.objects.filter(user=request.user).select_related("user", "category", "condition").order_by("-request_date")
+        donation_requests = DonationRequest.objects.filter(user=request.user).select_related("user", "category", "condition").prefetch_related("images").order_by("-request_date")
         donation_data = DonationRequestSerializer(donation_requests, many=True, context={'request': request}).data
         
         # Add type identifier to each item

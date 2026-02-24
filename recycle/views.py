@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from recycle.models import ScrapCategory, ScrapRequest
 from recycle.serializers import ScrapCategorySerializer, ScrapRequestSerializer
 from ecoLoop.utils import api_response
@@ -37,10 +38,11 @@ class ScrapCategoryViewSet(viewsets.ModelViewSet):
 class ScrapRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = ScrapRequestSerializer
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get_queryset(self):
         # Users can only see their own scrap requests
-        return ScrapRequest.objects.filter(user=self.request.user)
+        return ScrapRequest.objects.filter(user=self.request.user).prefetch_related("images")
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

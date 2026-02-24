@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import DonationCategory, DonationCondition, DonationRequest
 from .serializers import (
     DonationCategorySerializer,
@@ -67,10 +68,11 @@ class DonationConditionViewSet(viewsets.ModelViewSet):
 class DonationRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = DonationRequestSerializer
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get_queryset(self):
         # Users can only see their own donation requests
-        return DonationRequest.objects.filter(user=self.request.user)
+        return DonationRequest.objects.filter(user=self.request.user).prefetch_related("images")
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
