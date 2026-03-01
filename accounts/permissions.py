@@ -42,3 +42,25 @@ class IsSuperUser(BasePermission):
         return bool(
             request.user and request.user.is_authenticated and request.user.is_superuser
         )
+
+
+class IsNGO(BasePermission):
+    """
+    Allows access only to users with NGO role.
+    """
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        return request.user.roles.filter(name="NGO").exists()
+
+
+class IsRecycler(BasePermission):
+    """
+    Allows access only to users with RECYCLER role.
+    """
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        return request.user.roles.filter(name="RECYCLER").exists()
