@@ -125,11 +125,11 @@ class RecyclerScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = ScrapRequestFilter
 
     def get_queryset(self):
-        # Recycler can see all pending scrap requests
+        # Recycler can see all pending scrap requests that are not yet accepted
         return (
-            ScrapRequest.objects.filter(status="Pending")
+            ScrapRequest.objects.filter(status="pending", accepted_by__isnull=True)
             .prefetch_related("images")
-            .select_related("category", "user")
+            .select_related("category", "user", "accepted_by")
         )
 
     def list(self, request, *args, **kwargs):
@@ -186,7 +186,7 @@ class RecyclerScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         # Check if request is still pending
-        if scrap_request.status != "Pending":
+        if scrap_request.status != "pending":
             return api_response(
                 result=None,
                 is_success=False,
@@ -206,6 +206,7 @@ class RecyclerScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Update request status
         scrap_request.status = "accepted"
+        scrap_request.accepted_by = request.user
         scrap_request.save()
 
         # Save the offer
@@ -236,11 +237,69 @@ class RecyclerAcceptedScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = ScrapRequestFilter
 
     def get_queryset(self):
-        # Recycler can see all accepted scrap requests
+        # Recycler can only see scrap requests accepted by themselves
         return (
-            ScrapRequest.objects.filter(status="accepted")
+            ScrapRequest.objects.filter(
+                status="accepted", accepted_by=self.request.user
+            )
             .prefetch_related("images", "recycler_offers")
-            .select_related("category", "user")
+            .select_related("category", "user", "accepted_by")
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            data = self.get_serializer(page, many=True).data
+            result = {
+                "count": getattr(self.paginator.page.paginator, "count", len(data)),
+                "next": self.paginator.get_next_link(),
+                "previous": self.paginator.get_previous_link(),
+                "results": data,
+            }
+            return api_response(
+                result=result,
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        data = self.get_serializer(queryset, many=True).data
+        return api_response(
+            result=data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class RecyclerCompletedScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for Recycler users to view completed scrap requests.
+    Recyclers can list and retrieve completed scrap requests with offer details.
+    Supports filtering by category, condition, and weight range.
+    """
+
+    permission_classes = [IsAuthenticated, IsRecycler]
+    serializer_class = RecyclerAcceptedScrapRequestSerializer
+    filterset_class = ScrapRequestFilter
+
+    def get_queryset(self):
+        # Recycler can only see completed scrap requests accepted by themselves
+        return (
+            ScrapRequest.objects.filter(
+                status="completed", accepted_by=self.request.user
+            )
+            .prefetch_related("images", "recycler_offers")
+            .select_related("category", "user", "accepted_by")
         )
 
     def list(self, request, *args, **kwargs):
@@ -290,11 +349,13 @@ class RecyclerAcceptedScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = ScrapRequestFilter
 
     def get_queryset(self):
-        # Recycler can see all accepted scrap requests
+        # Recycler can only see scrap requests accepted by themselves
         return (
-            ScrapRequest.objects.filter(status="accepted")
+            ScrapRequest.objects.filter(
+                status="accepted", accepted_by=self.request.user
+            )
             .prefetch_related("images", "recycler_offers")
-            .select_related("category", "user")
+            .select_related("category", "user", "accepted_by")
         )
 
     def list(self, request, *args, **kwargs):

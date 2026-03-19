@@ -28,6 +28,13 @@ class DonationRequest(models.Model):
     ]
 
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
+    accepted_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accepted_donation_requests",
+    )
     category = models.ForeignKey(
         DonationCategory, on_delete=models.PROTECT, related_name="donation_requests"
     )

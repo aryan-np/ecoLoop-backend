@@ -196,11 +196,11 @@ class NGODonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NGODonationRequestSerializer
 
     def get_queryset(self):
-        # NGO can see all pending donation requests
+        # NGO can see all pending donation requests that are not yet accepted
         return (
-            DonationRequest.objects.filter(status="pending")
+            DonationRequest.objects.filter(status="pending", accepted_by__isnull=True)
             .prefetch_related("images")
-            .select_related("user", "category", "condition")
+            .select_related("user", "category", "condition", "accepted_by")
         )
 
     def list(self, request, *args, **kwargs):
@@ -275,6 +275,7 @@ class NGODonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Update request status
         donation_request.status = "accepted"
+        donation_request.accepted_by = request.user
         donation_request.save()
 
         # Save the offer
@@ -303,11 +304,67 @@ class NGOAcceptedDonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NGOAcceptedDonationRequestSerializer
 
     def get_queryset(self):
-        # NGO can see all accepted donation requests
+        # NGO can only see donation requests accepted by themselves
         return (
-            DonationRequest.objects.filter(status="accepted")
+            DonationRequest.objects.filter(
+                status="accepted", accepted_by=self.request.user
+            )
             .prefetch_related("images", "ngo_offers")
-            .select_related("user", "category", "condition")
+            .select_related("user", "category", "condition", "accepted_by")
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            data = self.get_serializer(page, many=True).data
+            result = {
+                "count": getattr(self.paginator.page.paginator, "count", len(data)),
+                "next": self.paginator.get_next_link(),
+                "previous": self.paginator.get_previous_link(),
+                "results": data,
+            }
+            return api_response(
+                result=result,
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        data = self.get_serializer(queryset, many=True).data
+        return api_response(
+            result=data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class NGOCompletedDonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for NGO users to view completed donation requests.
+    NGO can list and retrieve completed donation requests with offer details.
+    """
+
+    permission_classes = [IsAuthenticated, IsNGO]
+    serializer_class = NGOAcceptedDonationRequestSerializer
+
+    def get_queryset(self):
+        # NGO can only see completed donation requests accepted by themselves
+        return (
+            DonationRequest.objects.filter(
+                status="completed", accepted_by=self.request.user
+            )
+            .prefetch_related("images", "ngo_offers")
+            .select_related("user", "category", "condition", "accepted_by")
         )
 
     def list(self, request, *args, **kwargs):

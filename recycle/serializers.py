@@ -26,6 +26,7 @@ class ScrapImageSerializer(serializers.ModelSerializer):
 
 class ScrapRequestSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    accepted_by = serializers.PrimaryKeyRelatedField(read_only=True)
     request_date = serializers.DateTimeField(read_only=True)
     status = serializers.CharField(read_only=True)
     category_details = ScrapCategorySerializer(source="category", read_only=True)
@@ -43,6 +44,7 @@ class ScrapRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user",
+            "accepted_by",
             "category",
             "category_details",
             "weight_kg",
@@ -72,6 +74,7 @@ class RecyclerScrapRequestSerializer(serializers.ModelSerializer):
     """Serializer for Recycler to view scrap requests with user details"""
 
     user_details = UserDetailsSerializer(source="user", read_only=True)
+    accepted_by = serializers.PrimaryKeyRelatedField(read_only=True)
     request_date = serializers.DateTimeField(read_only=True)
     status = serializers.CharField(read_only=True)
     category_details = ScrapCategorySerializer(source="category", read_only=True)
@@ -82,6 +85,7 @@ class RecyclerScrapRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user_details",
+            "accepted_by",
             "category",
             "category_details",
             "weight_kg",
@@ -122,6 +126,7 @@ class RecyclerAcceptedScrapRequestSerializer(serializers.ModelSerializer):
     """Serializer for Recycler to view accepted scrap requests with user and offer details"""
 
     user_details = UserDetailsSerializer(source="user", read_only=True)
+    accepted_by = serializers.PrimaryKeyRelatedField(read_only=True)
     request_date = serializers.DateTimeField(read_only=True)
     status = serializers.CharField(read_only=True)
     category_details = ScrapCategorySerializer(source="category", read_only=True)
@@ -133,6 +138,7 @@ class RecyclerAcceptedScrapRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user_details",
+            "accepted_by",
             "category",
             "category_details",
             "weight_kg",

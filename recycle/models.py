@@ -34,6 +34,13 @@ class ScrapRequest(models.Model):
     ]
 
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE)
+    accepted_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accepted_scrap_requests",
+    )
     category = models.ForeignKey(
         ScrapCategory, on_delete=models.PROTECT, related_name="requests"
     )

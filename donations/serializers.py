@@ -38,6 +38,7 @@ class DonationImageSerializer(serializers.ModelSerializer):
 
 class DonationRequestSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    accepted_by = serializers.PrimaryKeyRelatedField(read_only=True)
     request_date = serializers.DateTimeField(read_only=True)
     status = serializers.CharField(read_only=True)
     category_details = DonationCategorySerializer(source="category", read_only=True)
@@ -56,6 +57,7 @@ class DonationRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user",
+            "accepted_by",
             "category",
             "category_details",
             "condition",
@@ -85,6 +87,7 @@ class NGODonationRequestSerializer(serializers.ModelSerializer):
     """Serializer for NGO to view donation requests with user details"""
 
     user_details = UserDetailsSerializer(source="user", read_only=True)
+    accepted_by = serializers.PrimaryKeyRelatedField(read_only=True)
     request_date = serializers.DateTimeField(read_only=True)
     status = serializers.CharField(read_only=True)
     category_details = DonationCategorySerializer(source="category", read_only=True)
@@ -96,6 +99,7 @@ class NGODonationRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user_details",
+            "accepted_by",
             "category",
             "category_details",
             "condition",
@@ -136,6 +140,7 @@ class NGOAcceptedDonationRequestSerializer(serializers.ModelSerializer):
     """Serializer for NGO to view accepted donation requests with user and offer details"""
 
     user_details = UserDetailsSerializer(source="user", read_only=True)
+    accepted_by = serializers.PrimaryKeyRelatedField(read_only=True)
     request_date = serializers.DateTimeField(read_only=True)
     status = serializers.CharField(read_only=True)
     category_details = DonationCategorySerializer(source="category", read_only=True)
@@ -148,6 +153,7 @@ class NGOAcceptedDonationRequestSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user_details",
+            "accepted_by",
             "category",
             "category_details",
             "condition",
