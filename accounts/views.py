@@ -27,8 +27,16 @@ from accounts.serializers import (
     ReportReviewSerializer,
     AdminActivityLogSerializer,
     AdminUserSerializer,
+    OrganizationSerializer,
 )
-from .models import UserProfile, User, RoleApplication, Report, AdminActivityLog
+from .models import (
+    UserProfile,
+    User,
+    RoleApplication,
+    Report,
+    AdminActivityLog,
+    Organization,
+)
 from .serializers import UserProfileSerializer
 from .permissions import IsOwnerOrReadOnly, IsSuperUser, IsOwnerOrAdmin
 
@@ -654,7 +662,9 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = AdminUserSerializer(instance, data=request.data, partial=False, context={'request': request})
+        serializer = AdminUserSerializer(
+            instance, data=request.data, partial=False, context={"request": request}
+        )
 
         if not serializer.is_valid():
             return api_response(
@@ -686,7 +696,9 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = AdminUserSerializer(instance, data=request.data, partial=True, context={'request': request})
+        serializer = AdminUserSerializer(
+            instance, data=request.data, partial=True, context={"request": request}
+        )
 
         if not serializer.is_valid():
             return api_response(
@@ -1298,6 +1310,41 @@ class AdminActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(logs, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["Organization"])
+class OrganizationView(APIView):
+    """Retrieve the organization belonging to the authenticated user."""
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    @extend_schema(
+        summary="Get my organization",
+        description="Returns the organization profile of the currently authenticated user.",
+        responses={
+            200: OrganizationSerializer,
+            404: OpenApiResponse(description="No organization found for this user."),
+        },
+    )
+    def get(self, request):
+        try:
+            organization = Organization.objects.select_related(
+                "user", "role_application"
+            ).get(user=request.user)
+        except Organization.DoesNotExist:
+            return api_response(
+                is_success=False,
+                error_message="No organization found for this user.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = OrganizationSerializer(organization)
         return api_response(
             result=serializer.data,
             is_success=True,

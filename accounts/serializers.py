@@ -15,6 +15,7 @@ from accounts.models import (
     PendingRegistration,
     RoleApplication,
     RoleApplicationDocument,
+    Organization,
     Report,
     AdminActivityLog,
 )
@@ -715,6 +716,22 @@ class RoleApplicationReviewSerializer(serializers.Serializer):
                     },
                 )
                 instance.user.roles.add(role)
+
+                # Create or update the Organization for this user
+                Organization.objects.update_or_create(
+                    user=instance.user,
+                    defaults={
+                        "role_application": instance,
+                        "org_type": instance.role_type,
+                        "name": instance.organization_name,
+                        "registration_number": instance.registration_number,
+                        "established_date": instance.established_date,
+                        "address": instance.address,
+                        "description": instance.description,
+                        "is_verified": True,
+                    },
+                )
+
                 log_admin_action(
                     admin=admin_user,
                     action=f"application_approved",
@@ -751,6 +768,35 @@ class RoleApplicationReviewSerializer(serializers.Serializer):
                 )
 
         return instance
+
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    """Serializer for the Organization model"""
+
+    user_email = serializers.CharField(source="user.email", read_only=True)
+    user_name = serializers.CharField(source="user.full_name", read_only=True)
+    role_application_id = serializers.UUIDField(
+        source="role_application.id", read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = Organization
+        fields = [
+            "id",
+            "org_type",
+            "name",
+            "registration_number",
+            "established_date",
+            "address",
+            "description",
+            "is_verified",
+            "user_email",
+            "user_name",
+            "role_application_id",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
 
 
 class ReportSerializer(serializers.ModelSerializer):

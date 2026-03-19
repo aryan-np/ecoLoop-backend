@@ -79,3 +79,17 @@ class AdminActivityLogAdmin(admin.ModelAdmin):
 
 
 admin.site.register(models.AdminActivityLog, AdminActivityLogAdmin)
+
+
+class OrganizationAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "org_type", "user", "is_verified", "created_at")
+    search_fields = ("name", "user__email", "registration_number")
+    list_filter = ("org_type", "is_verified", "created_at")
+    ordering = ("-created_at",)
+    readonly_fields = ("id", "created_at", "updated_at")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user", "role_application")
+
+
+admin.site.register(models.Organization, OrganizationAdmin)

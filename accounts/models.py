@@ -271,6 +271,48 @@ class RoleApplicationDocument(models.Model):
         return f"Document for {self.application.user.email}"
 
 
+class Organization(models.Model):
+    ORG_TYPE_CHOICES = [
+        ("NGO", "NGO"),
+        ("RECYCLER", "Recycler"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="organization",
+    )
+    role_application = models.OneToOneField(
+        RoleApplication,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="organization",
+    )
+
+    org_type = models.CharField(max_length=20, choices=ORG_TYPE_CHOICES)
+    name = models.CharField(max_length=255)
+    registration_number = models.CharField(max_length=100, blank=True, null=True)
+    established_date = models.DateField(blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+
+    is_verified = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["org_type", "is_verified"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.org_type}) - {'Verified' if self.is_verified else 'Unverified'}"
+
+
 class Report(models.Model):
 
     STATUS_CHOICES = [

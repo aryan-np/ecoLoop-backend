@@ -13,6 +13,7 @@ from accounts.views import (
     ReportViewSet,
     AdminReportViewSet,
     AdminActivityLogViewSet,
+    OrganizationView,
 )
 
 router = DefaultRouter()
@@ -39,5 +40,6 @@ urlpatterns = [
     # path('profile/', UserProfileView.as_view(), name='user-profile'),
     path("token/refresh/", RefreshTokenView.as_view(), name="token-refresh"),
     path("verify-otp/", OTPVerifyView.as_view(), name="otp-verify"),
+    path("organization/", OrganizationView.as_view(), name="my-organization"),
     path("", include(router.urls)),
 ]
