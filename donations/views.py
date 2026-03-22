@@ -347,6 +347,39 @@ class NGOAcceptedDonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
             status_code=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=["post"], url_path="complete")
+    def complete_request(self, request, pk=None):
+        """
+        NGO marks an accepted donation request as completed.
+        Also marks NGO's related offers for that request as completed.
+        """
+        donation_request = self.get_object()
+
+        if donation_request.status != "accepted":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=f"Cannot complete request with status: {donation_request.status}",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        donation_request.status = "completed"
+        donation_request.save(update_fields=["status"])
+
+        NGOOffer.objects.filter(
+            donation_request=donation_request,
+            ngo=request.user,
+        ).exclude(status="completed").update(status="completed")
+
+        return api_response(
+            result={
+                "message": "Donation request marked as completed",
+                "request": NGOAcceptedDonationRequestSerializer(donation_request).data,
+            },
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
 
 class NGOCompletedDonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
     """

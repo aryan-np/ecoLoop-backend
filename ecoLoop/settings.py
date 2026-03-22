@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "communications",
     "recycle",
     "donations",
+    "analytics",
 ]
 
 MIDDLEWARE = [
