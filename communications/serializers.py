@@ -229,9 +229,9 @@ class ThreadSerializer(serializers.ModelSerializer):
         return None
 
     def get_last_message(self, obj):
-        last_msg = obj.messages.first()
+        last_msg = obj.messages.order_by("-created_at").first()
         if last_msg:
-            return MessageSerializer(last_msg).data
+            return MessageSerializer(last_msg, context=self.context).data
         return None
 
     def get_unread_count(self, obj):
@@ -261,6 +261,8 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
     product_name = serializers.SerializerMethodField()
 
     messages = MessageSerializer(many=True, read_only=True)
+    unread_count = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
 
     class Meta:
         model = Thread
@@ -276,6 +278,8 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
             "participant_email",
             "participant_name",
             "participant_profile_picture",
+            "unread_count",
+            "last_message",
             "messages",
             "created_at",
             "updated_at",
@@ -300,6 +304,18 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
                 return obj.user2
             else:
                 return obj.user1
+        return None
+
+    def get_unread_count(self, obj):
+        request = self.context.get("request")
+        if request and request.user:
+            return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+        return 0
+
+    def get_last_message(self, obj):
+        last_msg = obj.messages.order_by("-created_at").first()
+        if last_msg:
+            return MessageSerializer(last_msg, context=self.context).data
         return None
 
     def get_self_name(self, obj):

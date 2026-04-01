@@ -5,6 +5,10 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.pagination import PageNumberPagination
 
+
+class MessagePagination(PageNumberPagination):
+    page_size = 20
+
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -169,7 +173,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     serializer_class = MessageSerializer
-    pagination_class = PageNumberPagination
+    pagination_class = MessagePagination
 
     def get_queryset(self):
         """Get messages for a specific thread"""
@@ -274,3 +278,26 @@ class MessageViewSet(viewsets.ModelViewSet):
                 is_success=False,
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    @action(detail=False, methods=["post"], url_path="mark-read")
+    def mark_read(self, request):
+        message_ids = request.data.get("message_ids", [])
+
+        if not isinstance(message_ids, list) or not message_ids:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"message_ids": ["A non-empty list of message IDs is required."]},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        marked_count = Message.objects.filter(
+            id__in=message_ids,
+            is_read=False,
+        ).exclude(sender=request.user).update(is_read=True)
+
+        return api_response(
+            result={"marked_count": marked_count},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
