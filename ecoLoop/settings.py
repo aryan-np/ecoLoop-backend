@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "recycle",
     "donations",
     "analytics",
+    "payments",
 ]
 
 MIDDLEWARE = [
@@ -284,3 +285,11 @@ CHANNEL_LAYERS = {
         "CONFIG": {"hosts": [("127.0.0.1", 6379)]},
     }
 }
+
+# ==============================================================================
+# KHALTI PAYMENT GATEWAY
+# ==============================================================================
+KHALTI_SECRET_KEY = os.getenv("KHALTI_SECRET_KEY")
+KHALTI_PUBLIC_KEY = os.getenv("KHALTI_PUBLIC_KEY")
+KHALTI_BASE_URL = os.getenv("KHALTI_BASE_URL", "https://dev.khalti.com/api/v2/")
+WEBSITE_URL = os.getenv("WEBSITE_URL", "http://localhost:3000")
