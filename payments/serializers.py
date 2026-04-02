@@ -17,6 +17,7 @@ class InitiatePaymentSerializer(serializers.Serializer):
         help_text="Frontend URL Khalti redirects to after payment"
     )
     customer_info = CustomerInfoSerializer(required=False)
+    thread_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class VerifyPaymentSerializer(serializers.Serializer):

@@ -4,6 +4,8 @@ from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 from ecoLoop.utils import api_response
 from payments.models import Payment
@@ -80,6 +82,7 @@ class InitiatePaymentView(APIView):
             status="Initiated",
             payment_url=khalti_data["payment_url"],
             expires_at=khalti_data.get("expires_at"),
+            thread_id=data.get("thread_id"),
         )
 
         return api_response(
@@ -151,6 +154,30 @@ class VerifyPaymentView(APIView):
         payment.save()
 
         is_success = khalti_status == "Completed"
+
+        if is_success and payment.thread_id:
+            thread = payment.thread
+            offer = thread.offers.filter(status="accepted").order_by("-created_at").first()
+            if offer:
+                offer.is_paid = True
+                offer.save(update_fields=["is_paid"])
+
+                if thread.product:
+                    thread.product.status = "sold"
+                    thread.product.save(update_fields=["status"])
+
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f"thread_{thread.id}",
+                    {
+                        "type": "offer.event",
+                        "offer_id": offer.id,
+                        "amount": str(offer.amount),
+                        "status": "accepted",
+                        "proposed_by": str(offer.proposed_by_id),
+                        "is_paid": True,
+                    },
+                )
 
         return api_response(
             result={

@@ -72,7 +72,7 @@ class Command(BaseCommand):
             if created:
                 created_categories += 1
                 self.stdout.write(
-                    self.style.SUCCESS(f'✓ Created category: "{category.name}"')
+                    self.style.SUCCESS(f'[OK] Created category: "{category.name}"')
                 )
             else:
                 self.stdout.write(f'- Category already exists: "{category.name}"')
@@ -87,7 +87,7 @@ class Command(BaseCommand):
             if created:
                 created_conditions += 1
                 self.stdout.write(
-                    self.style.SUCCESS(f'✓ Created condition: "{condition.name}"')
+                    self.style.SUCCESS(f'[OK] Created condition: "{condition.name}"')
                 )
             else:
                 self.stdout.write(f'- Condition already exists: "{condition.name}"')
@@ -96,7 +96,7 @@ class Command(BaseCommand):
         self.stdout.write("\n" + "=" * 50)
         self.stdout.write(
             self.style.SUCCESS(
-                f"✓ Created {created_categories} categories and {created_conditions} conditions"
+                f"[OK] Created {created_categories} categories and {created_conditions} conditions"
             )
         )
         self.stdout.write("=" * 50)

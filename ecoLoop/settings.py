@@ -24,6 +24,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
 DEBUG = os.getenv("DJANGO_DEBUG") == "True"
 
 ALLOWED_HOSTS = [

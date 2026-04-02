@@ -64,6 +64,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event["message"]))
 
+    async def offer_event(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "offer",
+            "offer_id": event["offer_id"],
+            "amount": event["amount"],
+            "status": event["status"],
+            "proposed_by": event["proposed_by"],
+            "is_paid": event.get("is_paid", False),
+        }))
+
     async def send_error(self, error_message):
         await self.send(
             text_data=json.dumps({"type": "error", "message": error_message})

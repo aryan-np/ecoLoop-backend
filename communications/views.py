@@ -19,10 +19,13 @@ from communications.serializers import (
     ThreadSerializer,
     MessageSerializer,
     ThreadDetailSerializer,
+    OfferSerializer,
 )
-from communications.models import Thread, Message
+from communications.models import Thread, Message, Offer
 from ecoLoop.utils import api_response
 from django.db.models import Q
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 from loguru import logger
 
@@ -57,8 +60,8 @@ class ThreadViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return (
             Thread.objects.filter(Q(user1=user) | Q(user2=user))
-            .select_related("user1", "user2")
-            .prefetch_related("messages")
+            .select_related("user1", "user2", "product")
+            .prefetch_related("messages", "offers")
             .order_by("-updated_at")
         )
 
@@ -298,6 +301,184 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         return api_response(
             result={"marked_count": marked_count},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["Communications"])
+class OfferViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    serializer_class = OfferSerializer
+    http_method_names = ["get", "post", "patch"]
+
+    def get_queryset(self):
+        thread_id = self.request.query_params.get("thread_id")
+        if thread_id:
+            return (
+                Offer.objects.filter(thread_id=thread_id)
+                .select_related("proposed_by", "thread")
+                .order_by("-created_at")
+            )
+        return Offer.objects.none()
+
+    def _get_thread_or_error(self, thread_id):
+        try:
+            return Thread.objects.get(id=thread_id), None
+        except Thread.DoesNotExist:
+            return None, api_response(
+                result=None,
+                is_success=False,
+                error_message=["Thread not found."],
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+    def _assert_participant(self, thread, user):
+        if thread.user1 != user and thread.user2 != user:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=["You are not a participant of this thread."],
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    def _broadcast_offer(self, offer):
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"thread_{offer.thread_id}",
+            {
+                "type": "offer.event",
+                "offer_id": offer.id,
+                "amount": str(offer.amount),
+                "status": offer.status,
+                "proposed_by": str(offer.proposed_by_id),
+            },
+        )
+
+    def list(self, request, *args, **kwargs):
+        thread_id = request.query_params.get("thread_id")
+        if not thread_id:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=["thread_id query param is required."],
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        thread, err = self._get_thread_or_error(thread_id)
+        if err:
+            return err
+
+        err = self._assert_participant(thread, request.user)
+        if err:
+            return err
+
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    def create(self, request, *args, **kwargs):
+        thread_id = request.data.get("thread_id")
+        amount = request.data.get("amount")
+
+        if not thread_id:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"thread_id": ["This field is required."]},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        if not amount:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"amount": ["This field is required."]},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        thread, err = self._get_thread_or_error(thread_id)
+        if err:
+            return err
+
+        err = self._assert_participant(thread, request.user)
+        if err:
+            return err
+
+        # Expire any existing pending offer on this thread
+        Offer.objects.filter(thread=thread, status="pending").update(status="expired")
+
+        offer = Offer.objects.create(
+            thread=thread,
+            proposed_by=request.user,
+            amount=amount,
+            status="pending",
+        )
+
+        self._broadcast_offer(offer)
+
+        serializer = self.get_serializer(offer)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_201_CREATED,
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        try:
+            offer = Offer.objects.select_related("thread", "proposed_by").get(
+                pk=kwargs["pk"]
+            )
+        except Offer.DoesNotExist:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=["Offer not found."],
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        err = self._assert_participant(offer.thread, request.user)
+        if err:
+            return err
+
+        if offer.proposed_by == request.user:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=["You cannot respond to your own offer."],
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        if offer.status != "pending":
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=["Only pending offers can be accepted or rejected."],
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_status = request.data.get("status")
+        if new_status not in ("accepted", "rejected"):
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"status": ["Must be 'accepted' or 'rejected'."]},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        offer.status = new_status
+        offer.save(update_fields=["status"])
+
+        self._broadcast_offer(offer)
+
+        serializer = self.get_serializer(offer)
+        return api_response(
+            result=serializer.data,
             is_success=True,
             status_code=status.HTTP_200_OK,
         )

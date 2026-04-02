@@ -25,6 +25,13 @@ class Payment(models.Model):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="Initiated"
     )
+    thread = models.ForeignKey(
+        "communications.Thread",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments",
+    )
     payment_url = models.URLField(blank=True, null=True)
     expires_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

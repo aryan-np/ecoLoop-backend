@@ -56,3 +56,31 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message from {self.sender.email} in thread {self.thread.id}"
+
+
+class Offer(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+        ("expired", "Expired"),
+    ]
+
+    thread = models.ForeignKey(
+        Thread, on_delete=models.CASCADE, related_name="offers"
+    )
+    proposed_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="proposed_offers"
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default="pending"
+    )
+    is_paid = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Offer of {self.amount} on thread {self.thread_id} by {self.proposed_by.email}"

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from communications.models import Thread, Message
+from communications.models import Thread, Message, Offer
 from accounts.serializers import UserSerializer
 from products.models import Product
 from django.contrib.auth import get_user_model
@@ -70,9 +70,13 @@ class ThreadSerializer(serializers.ModelSerializer):
     # Product details (read-only)
     product_id = serializers.SerializerMethodField()
     product_name = serializers.SerializerMethodField()
+    product_price = serializers.SerializerMethodField()
+    product_is_sold = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     last_message = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
+    latest_offer = serializers.SerializerMethodField()
 
     class Meta:
         model = Thread
@@ -82,6 +86,9 @@ class ThreadSerializer(serializers.ModelSerializer):
             "product",
             "product_id",
             "product_name",
+            "product_price",
+            "product_is_sold",
+            "is_owner",
             "self_id",
             "self_email",
             "self_name",
@@ -92,6 +99,7 @@ class ThreadSerializer(serializers.ModelSerializer):
             "participant_profile_picture",
             "last_message",
             "unread_count",
+            "latest_offer",
             "created_at",
             "updated_at",
         ]
@@ -218,14 +226,31 @@ class ThreadSerializer(serializers.ModelSerializer):
             return obj.product.title
         return None
 
-    def get_product_id(self, obj):
+    def get_product_price(self, obj):
         if obj.product:
-            return obj.product.id
+            return obj.product.price
         return None
 
-    def get_product_name(self, obj):
+    def get_product_is_sold(self, obj):
         if obj.product:
-            return obj.product.title
+            return obj.product.status == "sold"
+        return False
+
+    def get_is_owner(self, obj):
+        request = self.context.get("request")
+        if request and obj.product:
+            return obj.product.owner_id == request.user.id
+        return False
+
+    def get_latest_offer(self, obj):
+        offer = obj.offers.order_by("-created_at").first()
+        if offer:
+            return {
+                "id": offer.id,
+                "amount": str(offer.amount),
+                "status": offer.status,
+                "proposed_by_id": str(offer.proposed_by_id),
+            }
         return None
 
     def get_last_message(self, obj):
@@ -259,10 +284,14 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
     # Product details
     product_id = serializers.SerializerMethodField()
     product_name = serializers.SerializerMethodField()
+    product_price = serializers.SerializerMethodField()
+    product_is_sold = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
 
     messages = MessageSerializer(many=True, read_only=True)
     unread_count = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
+    latest_offer = serializers.SerializerMethodField()
 
     class Meta:
         model = Thread
@@ -270,6 +299,9 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
             "id",
             "product_id",
             "product_name",
+            "product_price",
+            "product_is_sold",
+            "is_owner",
             "self_id",
             "self_email",
             "self_name",
@@ -280,6 +312,7 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
             "participant_profile_picture",
             "unread_count",
             "last_message",
+            "latest_offer",
             "messages",
             "created_at",
             "updated_at",
@@ -318,6 +351,33 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
             return MessageSerializer(last_msg, context=self.context).data
         return None
 
+    def get_product_price(self, obj):
+        if obj.product:
+            return obj.product.price
+        return None
+
+    def get_product_is_sold(self, obj):
+        if obj.product:
+            return obj.product.status == "sold"
+        return False
+
+    def get_is_owner(self, obj):
+        request = self.context.get("request")
+        if request and obj.product:
+            return obj.product.owner_id == request.user.id
+        return False
+
+    def get_latest_offer(self, obj):
+        offer = obj.offers.order_by("-created_at").first()
+        if offer:
+            return {
+                "id": offer.id,
+                "amount": str(offer.amount),
+                "status": offer.status,
+                "proposed_by_id": str(offer.proposed_by_id),
+            }
+        return None
+
     def get_self_name(self, obj):
         user = self.get_self_user(obj)
         return user.full_name if user else None
@@ -351,3 +411,22 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(user.profile.profile_picture.url)
             return user.profile.profile_picture.url
         return None
+
+
+class OfferSerializer(serializers.ModelSerializer):
+    proposed_by_id = serializers.CharField(source="proposed_by.id", read_only=True)
+    proposed_by_name = serializers.CharField(source="proposed_by.full_name", read_only=True)
+
+    class Meta:
+        model = Offer
+        fields = [
+            "id",
+            "thread",
+            "amount",
+            "status",
+            "is_paid",
+            "proposed_by_id",
+            "proposed_by_name",
+            "created_at",
+        ]
+        read_only_fields = ["id", "status", "is_paid", "proposed_by_id", "proposed_by_name", "created_at"]
