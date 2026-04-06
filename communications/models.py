@@ -3,16 +3,16 @@ from django.contrib.auth import get_user_model
 from django.utils.timezone import now
 from products.models import Product
 
-User = get_user_model()
+# User = get_user_model()
 
 
 class Thread(models.Model):
 
     user1 = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="user1_threads"
+        "accounts.User", on_delete=models.CASCADE, related_name="user1_threads"
     )
     user2 = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="user2_threads"
+        "accounts.User", on_delete=models.CASCADE, related_name="user2_threads"
     )
     product = models.ForeignKey(
         Product,
@@ -41,7 +41,7 @@ class Message(models.Model):
         Thread, on_delete=models.CASCADE, related_name="messages"
     )
     sender = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="sent_messages"
+        "accounts.User", on_delete=models.CASCADE, related_name="sent_messages"
     )
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -70,7 +70,7 @@ class Offer(models.Model):
         Thread, on_delete=models.CASCADE, related_name="offers"
     )
     proposed_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="proposed_offers"
+        "accounts.User", on_delete=models.CASCADE, related_name="proposed_offers"
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(

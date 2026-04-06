@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
-from products.models import Product, Category, Condition
+from django.core.files import File
+from django.conf import settings
+from products.models import Product, ProductImage, Category, Condition
 from accounts.models import User
 import os
 
@@ -7,21 +9,27 @@ import os
 class Command(BaseCommand):
     help = "Populate initial products for testing"
 
-    def handle(self, *args, **options):
-        admin_id = "692f860d-aba2-47e0-aadd-a626cd4b056f"
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--owner-id",
+            type=str,
+            default="9b4b4bbe-6f29-484f-86a9-1e2ac8f90d49",
+            help="UUID of the user who will own seeded products.",
+        )
 
-        # Get admin user
+    def handle(self, *args, **options):
+        owner_id = options["owner_id"]
+
         try:
-            owner = User.objects.get(id=admin_id)
+            owner = User.objects.get(id=owner_id)
         except User.DoesNotExist:
-            self.stdout.write(self.style.ERROR(f"✗ User with id {admin_id} not found"))
+            self.stdout.write(self.style.ERROR(f"User with UUID {owner_id} not found."))
             return
 
-        # Check if logo.png exists
-        image_path = "products/logo.png"
-        if not os.path.exists(os.path.join("media", image_path)):
+        image_path = os.path.join(settings.BASE_DIR, "image.png")
+        if not os.path.exists(image_path):
             self.stdout.write(
-                self.style.WARNING(f"⚠ Image file not found at media/{image_path}")
+                self.style.ERROR(f"Image file not found at project root: {image_path}.")
             )
             return
 
@@ -34,10 +42,10 @@ class Command(BaseCommand):
             like_new = Condition.objects.get(name="Like New")
             fair = Condition.objects.get(name="Fair")
             good = Condition.objects.get(name="Good")
-        except Category.DoesNotExist or Condition.DoesNotExist:
+        except (Category.DoesNotExist, Condition.DoesNotExist):
             self.stdout.write(
                 self.style.ERROR(
-                    "✗ Categories or Conditions not found. Run populate_categories_conditions first"
+                    "Categories or conditions not found. Run populate_categories_conditions first."
                 )
             )
             return
@@ -123,49 +131,10 @@ class Command(BaseCommand):
                 "price": 120.00,
                 "location": "Portland, OR",
             },
-            {
-                "title": "Sneaker Collection",
-                "description": "Nike and Adidas sneakers, various sizes",
-                "category": clothing,
-                "condition": like_new,
-                "price": 200.00,
-                "location": "Austin, TX",
-            },
-            {
-                "title": "Samsung 55-inch Smart TV",
-                "description": "4K resolution, all streaming apps included",
-                "category": electronics,
-                "condition": good,
-                "price": 400.00,
-                "location": "Houston, TX",
-            },
-            {
-                "title": "Coffee Table",
-                "description": "Modern glass and wood coffee table",
-                "category": furniture,
-                "condition": like_new,
-                "price": 180.00,
-                "location": "Washington, DC",
-            },
-            {
-                "title": "Casual Jeans Pack",
-                "description": "5 pairs of casual jeans, mixed sizes",
-                "category": clothing,
-                "condition": good,
-                "price": 100.00,
-                "location": "Philadelphia, PA",
-            },
-            {
-                "title": "Portable Bluetooth Speaker",
-                "description": "Waterproof speaker, great battery life",
-                "category": electronics,
-                "condition": like_new,
-                "price": 60.00,
-                "location": "Las Vegas, NV",
-            },
         ]
 
         created_count = 0
+        images_attached_count = 0
         for product_data in products_data:
             product, created = Product.objects.get_or_create(
                 title=product_data["title"],
@@ -176,20 +145,31 @@ class Command(BaseCommand):
                     "condition": product_data["condition"],
                     "price": product_data["price"],
                     "location": product_data["location"],
-                    "image": image_path,
-                    "product_type": "sell",
                     "is_active": True,
                 },
             )
+
+            # Attach the same root image once per product if it has no image yet.
+            if not product.images.exists():
+                with open(image_path, "rb") as image_file:
+                    ProductImage.objects.create(
+                        product=product,
+                        image=File(image_file, name="image.png"),
+                    )
+                images_attached_count += 1
+
             if created:
                 created_count += 1
                 self.stdout.write(
-                    self.style.SUCCESS(f' Created product: "{product.title}"')
+                    self.style.SUCCESS(f'Created product: "{product.title}"')
                 )
             else:
                 self.stdout.write(f'- Product already exists: "{product.title}"')
 
         # Summary
         self.stdout.write("\n" + "=" * 50)
-        self.stdout.write(self.style.SUCCESS(f" Created {created_count} products"))
+        self.stdout.write(self.style.SUCCESS(f"Created {created_count} products"))
+        self.stdout.write(
+            self.style.SUCCESS(f"Attached {images_attached_count} images")
+        )
         self.stdout.write("=" * 50)
