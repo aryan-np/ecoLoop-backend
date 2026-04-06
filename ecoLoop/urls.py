@@ -32,6 +32,7 @@ urlpatterns = [
     path("api/communications/", include("communications.urls")),
     path("api/recycle/", include("recycle.urls")),
     path("api/donations/", include("donations.urls")),
+    path("api/reviews/", include("reviews.urls")),
     path("api/impact/", include("analytics.urls")),
     path("api/analytics/", include("analytics.urls")),
     path("api/payments/", include("payments.urls")),

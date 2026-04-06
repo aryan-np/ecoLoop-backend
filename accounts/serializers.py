@@ -1,6 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Avg, Count
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 
@@ -34,6 +35,8 @@ MAX_ATTEMPTS = 5
 
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -47,6 +50,8 @@ class UserSerializer(serializers.ModelSerializer):
             "is_email_verified",
             "is_phone_verified",
             "date_joined",
+            "average_rating",
+            "review_count",
         ]
 
     def get_roles(self, obj):
@@ -59,6 +64,12 @@ class UserSerializer(serializers.ModelSerializer):
             }
             for role in obj.roles.all()
         ]
+
+    def get_average_rating(self, obj):
+        return obj.received_reviews.aggregate(avg=Avg("rating"))["avg"]
+
+    def get_review_count(self, obj):
+        return obj.received_reviews.aggregate(total=Count("id"))["total"]
 
 
 class UserRegistrationSerializer(serializers.Serializer):

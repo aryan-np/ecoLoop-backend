@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "donations",
     "analytics",
     "payments",
+    "reviews",
 ]
 
 MIDDLEWARE = [
