@@ -87,7 +87,37 @@ class NGOOffer(models.Model):
     offer_date = models.DateTimeField(auto_now_add=True)
     pickup_date = models.DateTimeField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
+    photo_proof = models.ImageField(
+        upload_to="donation_proofs/",
+        blank=True,
+        null=True,
+    )
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="pending")
 
     def __str__(self):
         return f"NGO Offer by {self.ngo.full_name} for Donation Request {self.donation_request.id}"
+
+
+class SavedDonationRequest(models.Model):
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="saved_donation_requests",
+    )
+    donation_request = models.ForeignKey(
+        DonationRequest,
+        on_delete=models.CASCADE,
+        related_name="saved_by",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "donation_request")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["donation_request"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} saved donation {self.donation_request_id}"

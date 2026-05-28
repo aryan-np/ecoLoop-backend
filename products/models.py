@@ -69,6 +69,7 @@ class Product(models.Model):
     )
 
     is_active = models.BooleanField(default=True)
+    is_admin_reviewed = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -88,3 +89,30 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.product.title} uploaded at {self.uploaded_at}"
+
+
+class Favorite(models.Model):
+    """User's favorite products (wishlist)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="favorites",
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="favorited_by",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "product")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["product"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} favorited {self.product.title}"

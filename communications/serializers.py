@@ -147,10 +147,12 @@ class ThreadSerializer(serializers.ModelSerializer):
             user2_id=user_ids[1],
         )
 
-        # Update product if provided
-        if product:
+        if product and thread.product_id != product.id:
             thread.product = product
-            thread.save()
+            thread.save(update_fields=["product", "updated_at"])
+
+            # Clear offers tied to the previous product context.
+            Offer.objects.filter(thread=thread).delete()
 
         return thread
 
@@ -243,7 +245,7 @@ class ThreadSerializer(serializers.ModelSerializer):
         return False
 
     def get_latest_offer(self, obj):
-        offer = obj.offers.order_by("-created_at").first()
+        offer = obj.offers.exclude(status="expired").order_by("-created_at").first()
         if offer:
             return {
                 "id": offer.id,
@@ -254,7 +256,7 @@ class ThreadSerializer(serializers.ModelSerializer):
         return None
 
     def get_last_message(self, obj):
-        last_msg = obj.messages.order_by("-created_at").first()
+        last_msg = obj.messages.filter(is_deleted=False).order_by("-created_at").first()
         if last_msg:
             return MessageSerializer(last_msg, context=self.context).data
         return None
@@ -263,7 +265,9 @@ class ThreadSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user:
             return (
-                obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+                obj.messages.filter(is_read=False, is_deleted=False)
+                .exclude(sender=request.user)
+                .count()
             )
         return 0
 
@@ -288,7 +292,7 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
     product_is_sold = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
 
-    messages = MessageSerializer(many=True, read_only=True)
+    messages = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     latest_offer = serializers.SerializerMethodField()
@@ -342,14 +346,22 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
     def get_unread_count(self, obj):
         request = self.context.get("request")
         if request and request.user:
-            return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+            return (
+                obj.messages.filter(is_read=False, is_deleted=False)
+                .exclude(sender=request.user)
+                .count()
+            )
         return 0
 
     def get_last_message(self, obj):
-        last_msg = obj.messages.order_by("-created_at").first()
+        last_msg = obj.messages.filter(is_deleted=False).order_by("-created_at").first()
         if last_msg:
             return MessageSerializer(last_msg, context=self.context).data
         return None
+
+    def get_messages(self, obj):
+        messages = obj.messages.filter(is_deleted=False).order_by("created_at")
+        return MessageSerializer(messages, many=True, context=self.context).data
 
     def get_product_price(self, obj):
         if obj.product:
@@ -415,7 +427,9 @@ class ThreadDetailSerializer(serializers.ModelSerializer):
 
 class OfferSerializer(serializers.ModelSerializer):
     proposed_by_id = serializers.CharField(source="proposed_by.id", read_only=True)
-    proposed_by_name = serializers.CharField(source="proposed_by.full_name", read_only=True)
+    proposed_by_name = serializers.CharField(
+        source="proposed_by.full_name", read_only=True
+    )
 
     class Meta:
         model = Offer
@@ -429,4 +443,11 @@ class OfferSerializer(serializers.ModelSerializer):
             "proposed_by_name",
             "created_at",
         ]
-        read_only_fields = ["id", "status", "is_paid", "proposed_by_id", "proposed_by_name", "created_at"]
+        read_only_fields = [
+            "id",
+            "status",
+            "is_paid",
+            "proposed_by_id",
+            "proposed_by_name",
+            "created_at",
+        ]

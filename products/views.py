@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Prefetch
 
 from drf_spectacular.utils import (
     extend_schema,
@@ -12,20 +13,41 @@ from drf_spectacular.utils import (
     OpenApiResponse,
 )
 
-from .models import Product, Category, Condition, ProductImage
+from .models import Product, Category, Condition, ProductImage, Favorite
 from .serializers import (
     ProductSerializer,
     ProductListSerializer,
     CategorySerializer,
     ConditionSerializer,
+    FavoriteSerializer,
+    FavoriteDetailSerializer,
 )
 from .filters import ProductStatusFilter
-from accounts.permissions import IsOwnerOrReadOnlyProduct
+from accounts.permissions import IsOwnerOrReadOnlyProduct, IsSuperUser
+from accounts.models import Report
+from django.utils import timezone
 from ecoLoop.utils import api_response
+from ecoLoop.utils import log_admin_action
+from ecoLoop.mail import (
+    send_product_sold,
+    send_product_deleted_notice,
+    send_product_restored_notice,
+    send_report_reviewed,
+)
 from recycle.models import ScrapRequest
 from recycle.serializers import ScrapRequestSerializer
 from donations.models import DonationRequest
 from donations.serializers import DonationRequestSerializer
+
+
+def _as_bool(value, default=True):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    return bool(value)
 
 
 @extend_schema_view(
@@ -165,15 +187,21 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Return all products that are active and available
-
-        return (
-            Product.objects.filter(
-                is_active=True, status="available"
-            )
+        queryset = (
+            Product.objects.filter(is_active=True, status="available")
             .select_related("owner", "category", "condition")
             .prefetch_related("images")
-            .order_by("-created_at")
         )
+
+        if self.request.user and self.request.user.is_authenticated:
+            favorites_prefetch = Prefetch(
+                "favorited_by",
+                queryset=Favorite.objects.filter(user=self.request.user),
+                to_attr="user_favorite",
+            )
+            queryset = queryset.prefetch_related(favorites_prefetch)
+
+        return queryset.order_by("-created_at")
 
     def perform_create(self, serializer):
         # Save product with authenticated user as owner
@@ -269,6 +297,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        previous_status = instance.status
         serializer = self.get_serializer(instance, data=request.data, partial=False)
 
         if not serializer.is_valid():
@@ -280,6 +309,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             )
 
         self.perform_update(serializer)
+
+        if previous_status != "sold" and serializer.instance.status == "sold":
+            send_product_sold(
+                serializer.instance.owner.email,
+                serializer.instance.owner.full_name,
+                serializer.instance.title,
+            )
 
         return api_response(
             result=serializer.data,
@@ -301,6 +337,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     )
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
+        previous_status = instance.status
         serializer = self.get_serializer(instance, data=request.data, partial=True)
 
         if not serializer.is_valid():
@@ -312,6 +349,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             )
 
         self.perform_update(serializer)
+
+        if previous_status != "sold" and serializer.instance.status == "sold":
+            send_product_sold(
+                serializer.instance.owner.email,
+                serializer.instance.owner.full_name,
+                serializer.instance.title,
+            )
 
         return api_response(
             result=serializer.data,
@@ -340,49 +384,276 @@ class ProductViewSet(viewsets.ModelViewSet):
             status_code=status.HTTP_204_NO_CONTENT,
         )
 
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="admin-delete",
+        permission_classes=[IsSuperUser],
+    )
+    def admin_delete(self, request, *args, **kwargs):
+        product = Product.objects.filter(id=kwargs.get("id")).first()
+        if not product:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="Product not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        report_id = request.data.get("report_id")
+        if report_id:
+            report = (
+                Report.objects.filter(id=report_id)
+                .select_related("user", "listing_id")
+                .first()
+            )
+            if not report:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report not found",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+            if report.status not in {"pending", "reopened"}:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Only pending or reopened reports can be actioned",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            if report.listing_id_id and report.listing_id_id != product.id:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report does not match this product",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if not product.is_active:
+            product.is_admin_reviewed = True
+            product.save(update_fields=["is_admin_reviewed"])
+            return api_response(
+                result={
+                    "is_active": product.is_active,
+                    "is_admin_reviewed": True,
+                    "message": "Already deleted.",
+                },
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        product.is_active = False
+        product.is_admin_reviewed = True
+        product.save(update_fields=["is_active", "is_admin_reviewed"])
+
+        log_admin_action(
+            admin=request.user,
+            action="listing_removed",
+            target_type="Listing",
+            target_id=product.id,
+            target_name=product.title,
+            reason=request.data.get("reason"),
+        )
+
+        notify_user = _as_bool(request.data.get("notify_user"), default=True)
+        if notify_user:
+            send_product_deleted_notice(
+                product.owner.email,
+                product.owner.full_name,
+                product.title,
+            )
+
+        if report_id:
+            report.status = "resolved"
+            report.reviewed_by = request.user
+            report.reviewed_at = timezone.now()
+            report.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+            if notify_user and report.user and report.user.email:
+                send_report_reviewed(
+                    report.user.email,
+                    report.user.full_name,
+                    report.subject,
+                )
+
+        return api_response(
+            result={
+                "is_active": product.is_active,
+                "is_admin_reviewed": True,
+                "message": "Deleted.",
+            },
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="admin-restore",
+        permission_classes=[IsSuperUser],
+    )
+    def admin_restore(self, request, *args, **kwargs):
+        product = Product.objects.filter(id=kwargs.get("id")).first()
+        if not product:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="Product not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        report_id = request.data.get("report_id")
+        if report_id:
+            report = (
+                Report.objects.filter(id=report_id)
+                .select_related("user", "listing_id")
+                .first()
+            )
+            if not report:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report not found",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+            if report.status != "resolved":
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Only resolved reports can be undone",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            if report.listing_id_id and report.listing_id_id != product.id:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report does not match this product",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if product.is_active:
+            product.is_admin_reviewed = True
+            product.save(update_fields=["is_admin_reviewed"])
+            return api_response(
+                result={
+                    "is_active": product.is_active,
+                    "is_admin_reviewed": True,
+                    "message": "Already active.",
+                },
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        product.is_active = True
+        product.is_admin_reviewed = True
+        product.save(update_fields=["is_active", "is_admin_reviewed"])
+
+        log_admin_action(
+            admin=request.user,
+            action="listing_restored",
+            target_type="Listing",
+            target_id=product.id,
+            target_name=product.title,
+            reason=request.data.get("reason"),
+        )
+
+        notify_user = _as_bool(request.data.get("notify_user"), default=True)
+        if notify_user:
+            send_product_restored_notice(
+                product.owner.email,
+                product.owner.full_name,
+                product.title,
+            )
+
+        if report_id:
+            report.status = "reopened"
+            report.reviewed_by = request.user
+            report.reviewed_at = timezone.now()
+            report.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+            if notify_user and report.user and report.user.email:
+                send_report_reviewed(
+                    report.user.email,
+                    report.user.full_name,
+                    report.subject,
+                )
+
+        return api_response(
+            result={
+                "is_active": product.is_active,
+                "is_admin_reviewed": True,
+                "message": "Restored.",
+            },
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
 
 @extend_schema(tags=["Product"])
 @extend_schema_view(
     list=extend_schema(
         summary="List owner's all items",
         description="Retrieve all items owned by the authenticated user (products, scrap requests, and donation requests). Requires authentication.",
-        responses={200: OpenApiResponse(description="Combined list of products, scrap requests, and donation requests")},
+        responses={
+            200: OpenApiResponse(
+                description="Combined list of products, scrap requests, and donation requests"
+            )
+        },
     ),
 )
 class GetOwnerProductsViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
-    http_method_names = ['get']  # Only allow GET requests
+    http_method_names = ["get"]  # Only allow GET requests
 
     def list(self, request, *args, **kwargs):
         # Get all products
-        products = Product.objects.filter(owner=request.user).select_related("owner", "category", "condition").prefetch_related("images").order_by("-created_at")
-        product_data = ProductSerializer(products, many=True, context={'request': request}).data
-        
+        products = (
+            Product.objects.filter(owner=request.user)
+            .select_related("owner", "category", "condition")
+            .prefetch_related("images")
+            .order_by("-created_at")
+        )
+        product_data = ProductSerializer(
+            products, many=True, context={"request": request}
+        ).data
+
         # Get all scrap requests
-        scrap_requests = ScrapRequest.objects.filter(user=request.user).select_related("user", "category").prefetch_related("images").order_by("-request_date")
-        scrap_data = ScrapRequestSerializer(scrap_requests, many=True, context={'request': request}).data
-        
+        scrap_requests = (
+            ScrapRequest.objects.filter(user=request.user)
+            .select_related("user", "category")
+            .prefetch_related("images")
+            .order_by("-request_date")
+        )
+        scrap_data = ScrapRequestSerializer(
+            scrap_requests, many=True, context={"request": request}
+        ).data
+
         # Get all donation requests
-        donation_requests = DonationRequest.objects.filter(user=request.user).select_related("user", "category", "condition").prefetch_related("images").order_by("-request_date")
-        donation_data = DonationRequestSerializer(donation_requests, many=True, context={'request': request}).data
-        
+        donation_requests = (
+            DonationRequest.objects.filter(user=request.user)
+            .select_related("user", "category", "condition")
+            .prefetch_related("images")
+            .order_by("-request_date")
+        )
+        donation_data = DonationRequestSerializer(
+            donation_requests, many=True, context={"request": request}
+        ).data
+
         # Add type identifier to each item
         for item in product_data:
-            item['item_type'] = 'product'
+            item["item_type"] = "product"
         for item in scrap_data:
-            item['item_type'] = 'scrap'
+            item["item_type"] = "scrap"
         for item in donation_data:
-            item['item_type'] = 'donation'
-        
+            item["item_type"] = "donation"
+
         # Combine all items
         result = {
             "products": product_data,
             "scrap_requests": scrap_data,
             "donation_requests": donation_data,
-            "total_count": len(product_data) + len(scrap_data) + len(donation_data)
+            "total_count": len(product_data) + len(scrap_data) + len(donation_data),
         }
-        
+
         return api_response(
             result=result,
             is_success=True,
@@ -403,7 +674,6 @@ class GetUserProductsView(generics.ListAPIView):
         return (
             Product.objects.filter(
                 owner=user_id,
-
                 is_active=True,
                 status="available",
             )
@@ -424,6 +694,193 @@ class GetUserProductsView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return api_response(
             result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["Favorites"])
+class FavoriteViewSet(viewsets.ModelViewSet):
+    """Manage user's favorite products."""
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    lookup_field = "id"
+
+    def get_serializer_class(self):
+        if self.action in ["list", "retrieve"]:
+            return FavoriteDetailSerializer
+        return FavoriteSerializer
+
+    def get_queryset(self):
+        favorites_prefetch = Prefetch(
+            "product__favorited_by",
+            queryset=Favorite.objects.filter(user=self.request.user),
+            to_attr="user_favorite",
+        )
+        return (
+            Favorite.objects.filter(user=self.request.user)
+            .select_related(
+                "product",
+                "product__owner",
+                "product__category",
+                "product__condition",
+            )
+            .prefetch_related("product__images", favorites_prefetch)
+            .order_by("-created_at")
+        )
+
+    @extend_schema(
+        summary="List my favorites",
+        description="Retrieve all favorite products for the authenticated user.",
+        responses={
+            200: FavoriteDetailSerializer(many=True),
+            401: OpenApiResponse(description="Unauthorized."),
+        },
+    )
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            result = {
+                "count": getattr(self.paginator.page.paginator, "count", len(page)),
+                "next": self.paginator.get_next_link(),
+                "previous": self.paginator.get_previous_link(),
+                "results": serializer.data,
+            }
+            return api_response(
+                result=result,
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Get favorite detail",
+        description="Retrieve a specific favorite product by favorite ID.",
+        responses={
+            200: FavoriteDetailSerializer,
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Favorite not found."),
+        },
+    )
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Add product to favorites",
+        description="Add a product to the authenticated user's favorites (idempotent).",
+        request=FavoriteSerializer,
+        responses={
+            200: FavoriteDetailSerializer,
+            201: FavoriteDetailSerializer,
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Product not found."),
+        },
+    )
+    def create(self, request, *args, **kwargs):
+        product_id = request.data.get("product_id")
+
+        if not product_id:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"product_id": ["This field is required."]},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="Product not found.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        favorite, created = Favorite.objects.get_or_create(
+            user=request.user, product=product
+        )
+
+        serializer = FavoriteDetailSerializer(favorite, context={"request": request})
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status_code,
+        )
+
+    @extend_schema(
+        summary="Remove product from favorites",
+        description="Remove a product from the authenticated user's favorites.",
+        responses={
+            204: OpenApiResponse(description="Removed from favorites successfully."),
+            401: OpenApiResponse(description="Unauthorized."),
+            404: OpenApiResponse(description="Favorite not found."),
+        },
+    )
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+
+        return api_response(
+            result={"message": "Removed from favorites."},
+            is_success=True,
+            status_code=status.HTTP_204_NO_CONTENT,
+        )
+
+    @extend_schema(
+        summary="Check if product is favorited",
+        description="Check if a product is in the authenticated user's favorites.",
+        responses={
+            200: {
+                "type": "object",
+                "properties": {
+                    "is_favorited": {"type": "boolean"},
+                    "favorite_id": {"type": "integer", "nullable": True},
+                },
+            },
+            401: OpenApiResponse(description="Unauthorized."),
+        },
+    )
+    @action(detail=False, methods=["get"])
+    def is_favorited(self, request):
+        product_id = request.query_params.get("product_id")
+
+        if not product_id:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message={"product_id": ["This query parameter is required."]},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        favorite = Favorite.objects.filter(
+            user=request.user, product_id=product_id
+        ).first()
+
+        return api_response(
+            result={
+                "is_favorited": favorite is not None,
+                "favorite_id": favorite.id if favorite else None,
+            },
             is_success=True,
             status_code=status.HTTP_200_OK,
         )

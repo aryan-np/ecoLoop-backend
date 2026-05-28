@@ -96,3 +96,28 @@ class ScrapOffer(models.Model):
 
     def __str__(self):
         return f"Scrap Offer by {self.recycler.full_name} for Scrap Request {self.scrap_request.id}"
+
+
+class SavedScrapRequest(models.Model):
+    user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="saved_scrap_requests",
+    )
+    scrap_request = models.ForeignKey(
+        ScrapRequest,
+        on_delete=models.CASCADE,
+        related_name="saved_by",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "scrap_request")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["scrap_request"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} saved scrap {self.scrap_request_id}"

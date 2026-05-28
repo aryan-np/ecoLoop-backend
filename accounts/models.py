@@ -317,9 +317,9 @@ class Report(models.Model):
 
     STATUS_CHOICES = [
         ("pending", "Pending"),
-        ("in_review", "In Review"),
         ("resolved", "Resolved"),
         ("closed", "Closed"),
+        ("reopened", "Reopened"),
     ]
 
     CATEGORY_CHOICES = [

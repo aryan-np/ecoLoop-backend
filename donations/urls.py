@@ -7,6 +7,7 @@ from .views import (
     NGODonationRequestViewSet,
     NGOAcceptedDonationRequestViewSet,
     NGOCompletedDonationRequestViewSet,
+    SavedNGODonationRequestViewSet,
 )
 
 router = DefaultRouter()
@@ -25,6 +26,11 @@ router.register(
     r"ngo/completed-requests",
     NGOCompletedDonationRequestViewSet,
     basename="ngo-completed-requests",
+)
+router.register(
+    r"ngo/saved-requests",
+    SavedNGODonationRequestViewSet,
+    basename="ngo-saved-requests",
 )
 
 urlpatterns = [

@@ -197,7 +197,7 @@ def get_photo_proof_completion_rate(donation_requests_qs):
     if total == 0:
         return 0.0
 
-    with_proof = completed.filter(images__isnull=False).distinct().count()
+    with_proof = completed.filter(ngo_offers__photo_proof__isnull=False).distinct().count()
     return round((with_proof / total) * 100, 2)
 
 

@@ -9,6 +9,7 @@ from rest_framework.pagination import PageNumberPagination
 class MessagePagination(PageNumberPagination):
     page_size = 20
 
+
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -23,11 +24,30 @@ from communications.serializers import (
 )
 from communications.models import Thread, Message, Offer
 from ecoLoop.utils import api_response
-from django.db.models import Q
+from ecoLoop.utils import log_admin_action
+from django.db.models import Q, Prefetch
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from accounts.permissions import IsSuperUser
+from accounts.models import Report
+from django.utils import timezone
+from ecoLoop.mail import (
+    send_chat_cleared_notice,
+    send_chat_restored_notice,
+    send_report_reviewed,
+)
 
 from loguru import logger
+
+
+def _as_bool(value, default=True):
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y"}
+    return bool(value)
 
 
 @extend_schema(tags=["Communications"])
@@ -61,7 +81,10 @@ class ThreadViewSet(viewsets.ModelViewSet):
         return (
             Thread.objects.filter(Q(user1=user) | Q(user2=user))
             .select_related("user1", "user2", "product")
-            .prefetch_related("messages", "offers")
+            .prefetch_related(
+                Prefetch("messages", queryset=Message.objects.filter(is_deleted=False)),
+                "offers",
+            )
             .order_by("-updated_at")
         )
 
@@ -134,9 +157,9 @@ class ThreadViewSet(viewsets.ModelViewSet):
 
             serializer = ThreadDetailSerializer(thread, context={"request": request})
             # Mark messages as read
-            thread.messages.filter(is_read=False).exclude(sender=request.user).update(
-                is_read=True
-            )
+            thread.messages.filter(is_read=False, is_deleted=False).exclude(
+                sender=request.user
+            ).update(is_read=True)
 
             return api_response(
                 result=serializer.data,
@@ -155,6 +178,202 @@ class ThreadViewSet(viewsets.ModelViewSet):
                 is_success=False,
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="admin-clear-messages",
+        permission_classes=[IsSuperUser],
+    )
+    def admin_clear_messages(self, request, *args, **kwargs):
+        thread = Thread.objects.filter(id=kwargs.get("id")).first()
+        if not thread:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="Thread not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        report_id = request.data.get("report_id")
+        if report_id:
+            report = (
+                Report.objects.filter(id=report_id)
+                .select_related("user", "conversation_id")
+                .first()
+            )
+            if not report:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report not found",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+            if report.status not in {"pending", "reopened"}:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Only pending or reopened reports can be actioned",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            if report.conversation_id_id and report.conversation_id_id != thread.id:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report does not match this thread",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if not Message.objects.filter(thread=thread, is_deleted=False).exists():
+            if not thread.is_admin_reviewed:
+                thread.is_admin_reviewed = True
+                thread.save(update_fields=["is_admin_reviewed"])
+            return api_response(
+                result={"cleared_count": 0, "is_admin_reviewed": True},
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        cleared_count = Message.objects.filter(thread=thread).update(is_deleted=True)
+
+        if not thread.is_admin_reviewed:
+            thread.is_admin_reviewed = True
+            thread.save(update_fields=["is_admin_reviewed"])
+
+        log_admin_action(
+            admin=request.user,
+            action="other",
+            target_type="Thread",
+            target_id=thread.id,
+            target_name=f"Thread {thread.id}",
+            reason=request.data.get("reason"),
+        )
+
+        notify_user = _as_bool(request.data.get("notify_user"), default=True)
+        if notify_user:
+            for participant in [thread.user1, thread.user2]:
+                if participant and participant.email:
+                    send_chat_cleared_notice(
+                        participant.email,
+                        participant.full_name,
+                        str(thread.id),
+                    )
+
+        if report_id:
+            report.status = "resolved"
+            report.reviewed_by = request.user
+            report.reviewed_at = timezone.now()
+            report.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+            if notify_user and report.user and report.user.email:
+                send_report_reviewed(
+                    report.user.email,
+                    report.user.full_name,
+                    report.subject,
+                )
+
+        return api_response(
+            result={"cleared_count": cleared_count, "is_admin_reviewed": True},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="admin-restore-messages",
+        permission_classes=[IsSuperUser],
+    )
+    def admin_restore_messages(self, request, *args, **kwargs):
+        thread = Thread.objects.filter(id=kwargs.get("id")).first()
+        if not thread:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="Thread not found",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        report_id = request.data.get("report_id")
+        if report_id:
+            report = (
+                Report.objects.filter(id=report_id)
+                .select_related("user", "conversation_id")
+                .first()
+            )
+            if not report:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report not found",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+            if report.status != "resolved":
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Only resolved reports can be undone",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            if report.conversation_id_id and report.conversation_id_id != thread.id:
+                return api_response(
+                    result=None,
+                    is_success=False,
+                    error_message="Report does not match this thread",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if not Message.objects.filter(thread=thread, is_deleted=True).exists():
+            if not thread.is_admin_reviewed:
+                thread.is_admin_reviewed = True
+                thread.save(update_fields=["is_admin_reviewed"])
+            return api_response(
+                result={"restored_count": 0, "is_admin_reviewed": True},
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        restored_count = Message.objects.filter(thread=thread).update(is_deleted=False)
+
+        if not thread.is_admin_reviewed:
+            thread.is_admin_reviewed = True
+            thread.save(update_fields=["is_admin_reviewed"])
+
+        log_admin_action(
+            admin=request.user,
+            action="other",
+            target_type="Thread",
+            target_id=thread.id,
+            target_name=f"Thread {thread.id}",
+            reason=request.data.get("reason"),
+        )
+
+        notify_user = _as_bool(request.data.get("notify_user"), default=True)
+        if notify_user:
+            for participant in [thread.user1, thread.user2]:
+                if participant and participant.email:
+                    send_chat_restored_notice(
+                        participant.email,
+                        participant.full_name,
+                        str(thread.id),
+                    )
+
+        if report_id:
+            report.status = "reopened"
+            report.reviewed_by = request.user
+            report.reviewed_at = timezone.now()
+            report.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+            if notify_user and report.user and report.user.email:
+                send_report_reviewed(
+                    report.user.email,
+                    report.user.full_name,
+                    report.subject,
+                )
+
+        return api_response(
+            result={"restored_count": restored_count, "is_admin_reviewed": True},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
 
 
 @extend_schema(tags=["Communications"])
@@ -183,12 +402,14 @@ class MessageViewSet(viewsets.ModelViewSet):
         thread_id = self.request.query_params.get("thread_id")
         if thread_id:
             return (
-                Message.objects.filter(thread_id=thread_id)
+                Message.objects.filter(thread_id=thread_id, is_deleted=False)
                 .select_related("sender", "thread")
                 .order_by("-created_at")
             )
-        return Message.objects.select_related("sender", "thread").order_by(
-            "-created_at"
+        return (
+            Message.objects.filter(is_deleted=False)
+            .select_related("sender", "thread")
+            .order_by("-created_at")
         )
 
     def list(self, request, *args, **kwargs):
@@ -290,14 +511,20 @@ class MessageViewSet(viewsets.ModelViewSet):
             return api_response(
                 result=None,
                 is_success=False,
-                error_message={"message_ids": ["A non-empty list of message IDs is required."]},
+                error_message={
+                    "message_ids": ["A non-empty list of message IDs is required."]
+                },
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        marked_count = Message.objects.filter(
-            id__in=message_ids,
-            is_read=False,
-        ).exclude(sender=request.user).update(is_read=True)
+        marked_count = (
+            Message.objects.filter(
+                id__in=message_ids,
+                is_read=False,
+            )
+            .exclude(sender=request.user)
+            .update(is_read=True)
+        )
 
         return api_response(
             result={"marked_count": marked_count},

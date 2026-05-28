@@ -5,6 +5,7 @@ from .models import (
     DonationRequest,
     DonationImage,
     NGOOffer,
+    SavedDonationRequest,
 )
 
 
@@ -93,6 +94,7 @@ class NGODonationRequestSerializer(serializers.ModelSerializer):
     category_details = DonationCategorySerializer(source="category", read_only=True)
     condition_details = DonationConditionSerializer(source="condition", read_only=True)
     images = DonationImageSerializer(many=True, read_only=True)
+    is_saved = serializers.SerializerMethodField()
 
     class Meta:
         model = DonationRequest
@@ -112,7 +114,18 @@ class NGODonationRequestSerializer(serializers.ModelSerializer):
             "request_date",
             "status",
             "images",
+            "is_saved",
         ]
+
+    def get_is_saved(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        if hasattr(obj, "user_saved"):
+            return bool(obj.user_saved)
+        return SavedDonationRequest.objects.filter(
+            user=request.user, donation_request=obj
+        ).exists()
 
 
 class NGOOfferSerializer(serializers.ModelSerializer):
@@ -131,9 +144,14 @@ class NGOOfferSerializer(serializers.ModelSerializer):
             "offer_date",
             "pickup_date",
             "notes",
+            "photo_proof",
             "status",
         ]
         read_only_fields = ["id", "ngo", "offer_date", "status"]
+
+
+class DonationCompletionProofSerializer(serializers.Serializer):
+    photo_proof = serializers.ImageField(required=True)
 
 
 class NGOAcceptedDonationRequestSerializer(serializers.ModelSerializer):
@@ -168,3 +186,12 @@ class NGOAcceptedDonationRequestSerializer(serializers.ModelSerializer):
             "images",
             "ngo_offers",
         ]
+
+
+class SavedDonationRequestSerializer(serializers.ModelSerializer):
+    donation_request = NGODonationRequestSerializer(read_only=True)
+
+    class Meta:
+        model = SavedDonationRequest
+        fields = ["id", "donation_request", "created_at"]
+        read_only_fields = ["id", "donation_request", "created_at"]

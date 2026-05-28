@@ -466,6 +466,46 @@ class LogoutSerializer(serializers.Serializer):
             raise serializers.ValidationError({"message": "Invalid or expired token."})
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+    confirm_new_password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, data):
+        user = self.context["request"].user
+        old_password = data["old_password"]
+        new_password = data["new_password"]
+        confirm_new_password = data["confirm_new_password"]
+
+        if not user.check_password(old_password):
+            raise serializers.ValidationError(
+                {"old_password": "Old password is incorrect."}
+            )
+
+        if new_password != confirm_new_password:
+            raise serializers.ValidationError(
+                {"new_password": "New passwords do not match."}
+            )
+
+        if old_password == new_password:
+            raise serializers.ValidationError(
+                {"new_password": "New password must be different from old password."}
+            )
+
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as e:
+            raise serializers.ValidationError({"new_password": e.messages})
+
+        return data
+
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email")
     full_name = serializers.CharField(source="user.full_name")
@@ -899,6 +939,8 @@ class ReportAdminSerializer(serializers.ModelSerializer):
     reviewed_by_name = serializers.CharField(
         source="reviewed_by.full_name", read_only=True, allow_null=True
     )
+    listing_is_admin_reviewed = serializers.SerializerMethodField()
+    conversation_is_admin_reviewed = serializers.SerializerMethodField()
 
     class Meta:
         model = Report
@@ -908,6 +950,11 @@ class ReportAdminSerializer(serializers.ModelSerializer):
             "user_name",
             "user_email",
             "category",
+            "listing_id",
+            "target_user_id",
+            "conversation_id",
+            "listing_is_admin_reviewed",
+            "conversation_is_admin_reviewed",
             "subject",
             "description",
             "attachment",
@@ -925,12 +972,27 @@ class ReportAdminSerializer(serializers.ModelSerializer):
             "user_name",
             "user_email",
             "category",
+            "listing_id",
+            "target_user_id",
+            "conversation_id",
+            "listing_is_admin_reviewed",
+            "conversation_is_admin_reviewed",
             "subject",
             "description",
             "attachment",
             "reviewed_by_name",
             "created_at",
         ]
+
+    def get_listing_is_admin_reviewed(self, obj):
+        if obj.listing_id:
+            return bool(getattr(obj.listing_id, "is_admin_reviewed", False))
+        return False
+
+    def get_conversation_is_admin_reviewed(self, obj):
+        if obj.conversation_id:
+            return bool(getattr(obj.conversation_id, "is_admin_reviewed", False))
+        return False
 
     def update(self, instance, validated_data):
         # If status is being changed, update reviewed_by and reviewed_at
@@ -945,7 +1007,7 @@ class ReportReviewSerializer(serializers.Serializer):
     """Serializer for admin to review reports"""
 
     action = serializers.ChoiceField(
-        choices=["in_review", "resolve", "close"], required=True
+        choices=["resolve", "close", "reopen"], required=True
     )
     admin_notes = serializers.CharField(required=False, allow_blank=True)
 

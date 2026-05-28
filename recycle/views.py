@@ -4,16 +4,19 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from recycle.models import ScrapCategory, ScrapRequest, ScrapOffer
+from django.db.models import Prefetch
+from recycle.models import ScrapCategory, ScrapRequest, ScrapOffer, SavedScrapRequest
 from recycle.serializers import (
     ScrapCategorySerializer,
     ScrapRequestSerializer,
     RecyclerScrapRequestSerializer,
     ScrapOfferSerializer,
     RecyclerAcceptedScrapRequestSerializer,
+    SavedScrapRequestSerializer,
 )
 from recycle.filters import ScrapRequestFilter
 from ecoLoop.utils import api_response
+from ecoLoop.mail import send_scrap_status_update
 from accounts.permissions import IsRecycler
 
 # Create your views here.
@@ -126,9 +129,14 @@ class RecyclerScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # Recycler can see all pending scrap requests that are not yet accepted
+        saved_prefetch = Prefetch(
+            "saved_by",
+            queryset=SavedScrapRequest.objects.filter(user=self.request.user),
+            to_attr="user_saved",
+        )
         return (
             ScrapRequest.objects.filter(status="pending", accepted_by__isnull=True)
-            .prefetch_related("images")
+            .prefetch_related("images", saved_prefetch)
             .select_related("category", "user", "accepted_by")
         )
 
@@ -209,6 +217,12 @@ class RecyclerScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
         scrap_request.accepted_by = request.user
         scrap_request.save()
 
+        send_scrap_status_update(
+            scrap_request.user.email,
+            scrap_request.user.full_name,
+            "accepted",
+        )
+
         # Save the offer
         offer = offer_serializer.save(
             recycler=request.user, scrap_request=scrap_request
@@ -222,6 +236,46 @@ class RecyclerScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
             },
             is_success=True,
             status_code=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=True, methods=["post", "delete"], url_path="save")
+    def save_request(self, request, pk=None):
+        scrap_request = self.get_object()
+
+        if request.method == "POST":
+            SavedScrapRequest.objects.get_or_create(
+                user=request.user, scrap_request=scrap_request
+            )
+            return api_response(
+                result={"is_saved": True},
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        SavedScrapRequest.objects.filter(
+            user=request.user, scrap_request=scrap_request
+        ).delete()
+        return api_response(
+            result={"is_saved": False},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class SavedRecyclerScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated, IsRecycler]
+    serializer_class = SavedScrapRequestSerializer
+
+    def get_queryset(self):
+        return (
+            SavedScrapRequest.objects.filter(user=self.request.user)
+            .select_related(
+                "scrap_request",
+                "scrap_request__user",
+                "scrap_request__category",
+            )
+            .prefetch_related("scrap_request__images")
+            .order_by("-created_at")
         )
 
 
@@ -240,7 +294,8 @@ class RecyclerAcceptedScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
         # Recycler can only see scrap requests accepted by themselves
         return (
             ScrapRequest.objects.filter(
-                status="accepted", accepted_by=self.request.user
+                status="accepted",
+                accepted_by=self.request.user,
             )
             .prefetch_related("images", "recycler_offers")
             .select_related("category", "user", "accepted_by")
@@ -298,6 +353,12 @@ class RecyclerAcceptedScrapRequestViewSet(viewsets.ReadOnlyModelViewSet):
 
         scrap_request.status = "completed"
         scrap_request.save(update_fields=["status"])
+
+        send_scrap_status_update(
+            scrap_request.user.email,
+            scrap_request.user.full_name,
+            "completed",
+        )
 
         ScrapOffer.objects.filter(
             scrap_request=scrap_request,

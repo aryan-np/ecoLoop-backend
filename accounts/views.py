@@ -18,6 +18,7 @@ from accounts.serializers import (
     UserRegistrationSerializer,
     UserLoginSerializer,
     LogoutSerializer,
+    ChangePasswordSerializer,
     UserSerializer,
     OTPVerifySerializer,
     RoleApplicationSerializer,
@@ -185,6 +186,49 @@ class UserLogoutView(APIView):
             )
         except Exception as e:
             logger.critical(f"Error during user logout: {str(e)}")
+            return api_response(
+                is_success=False,
+                error_message=["Something went wrong. Please try again."],
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Change password",
+        description="Change the authenticated user's password using old_password and new_password.",
+        request=ChangePasswordSerializer,
+        responses={
+            200: OpenApiResponse(description="Password changed successfully."),
+            400: OpenApiResponse(description="Validation error."),
+            401: OpenApiResponse(description="Unauthorized."),
+            500: OpenApiResponse(description="Server error."),
+        },
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = ChangePasswordSerializer(
+            data=request.data, context={"request": request}
+        )
+        try:
+            if serializer.is_valid():
+                serializer.save()
+                return api_response(
+                    is_success=True,
+                    result={"message": "Password changed successfully."},
+                    status_code=status.HTTP_200_OK,
+                )
+
+            return api_response(
+                is_success=False,
+                error_message=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            logger.critical(f"Error during password change: {str(e)}")
             return api_response(
                 is_success=False,
                 error_message=["Something went wrong. Please try again."],

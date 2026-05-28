@@ -21,6 +21,7 @@ class Thread(models.Model):
         blank=True,
         related_name="threads",
     )
+    is_admin_reviewed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -46,12 +47,14 @@ class Message(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["created_at"]
         indexes = [
             models.Index(fields=["thread", "created_at"]),
             models.Index(fields=["is_read"]),
+            models.Index(fields=["is_deleted"]),
         ]
 
     def __str__(self):
@@ -66,16 +69,12 @@ class Offer(models.Model):
         ("expired", "Expired"),
     ]
 
-    thread = models.ForeignKey(
-        Thread, on_delete=models.CASCADE, related_name="offers"
-    )
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name="offers")
     proposed_by = models.ForeignKey(
         "accounts.User", on_delete=models.CASCADE, related_name="proposed_offers"
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(
-        max_length=10, choices=STATUS_CHOICES, default="pending"
-    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
     is_paid = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

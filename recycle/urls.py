@@ -6,6 +6,7 @@ from .views import (
     RecyclerScrapRequestViewSet,
     RecyclerAcceptedScrapRequestViewSet,
     RecyclerCompletedScrapRequestViewSet,
+    SavedRecyclerScrapRequestViewSet,
 )
 
 router = DefaultRouter()
@@ -25,6 +26,11 @@ router.register(
     r"recycler/completed-requests",
     RecyclerCompletedScrapRequestViewSet,
     basename="recycler-completed-requests",
+)
+router.register(
+    r"recycler/saved-requests",
+    SavedRecyclerScrapRequestViewSet,
+    basename="recycler-saved-requests",
 )
 
 urlpatterns = [

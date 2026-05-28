@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from recycle.models import ScrapCategory, ScrapRequest, ScrapImage, ScrapOffer
+from recycle.models import (
+    ScrapCategory,
+    ScrapRequest,
+    ScrapImage,
+    ScrapOffer,
+    SavedScrapRequest,
+)
 
 
 class UserDetailsSerializer(serializers.Serializer):
@@ -79,6 +85,7 @@ class RecyclerScrapRequestSerializer(serializers.ModelSerializer):
     status = serializers.CharField(read_only=True)
     category_details = ScrapCategorySerializer(source="category", read_only=True)
     images = ScrapImageSerializer(many=True, read_only=True)
+    is_saved = serializers.SerializerMethodField()
 
     class Meta:
         model = ScrapRequest
@@ -97,7 +104,18 @@ class RecyclerScrapRequestSerializer(serializers.ModelSerializer):
             "request_date",
             "status",
             "images",
+            "is_saved",
         ]
+
+    def get_is_saved(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        if hasattr(obj, "user_saved"):
+            return bool(obj.user_saved)
+        return SavedScrapRequest.objects.filter(
+            user=request.user, scrap_request=obj
+        ).exists()
 
 
 class ScrapOfferSerializer(serializers.ModelSerializer):
@@ -152,3 +170,12 @@ class RecyclerAcceptedScrapRequestSerializer(serializers.ModelSerializer):
             "images",
             "recycler_offers",
         ]
+
+
+class SavedScrapRequestSerializer(serializers.ModelSerializer):
+    scrap_request = RecyclerScrapRequestSerializer(read_only=True)
+
+    class Meta:
+        model = SavedScrapRequest
+        fields = ["id", "scrap_request", "created_at"]
+        read_only_fields = ["id", "scrap_request", "created_at"]

@@ -5,6 +5,7 @@ from .views import (
     ConditionViewSet,
     GetOwnerProductsViewSet,
     GetUserProductsView,
+    FavoriteViewSet,
 )
 from django.urls import path, include
 
@@ -13,6 +14,7 @@ router.register(r"products", ProductViewSet, basename="products")
 router.register(r"categories", CategoryViewSet, basename="categories")
 router.register(r"conditions", ConditionViewSet, basename="conditions")
 router.register(r"listing", GetOwnerProductsViewSet, basename="user-products")
+router.register(r"favorites", FavoriteViewSet, basename="favorites")
 
 urlpatterns = [
     path("", include(router.urls)),

@@ -4,7 +4,14 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import DonationCategory, DonationCondition, DonationRequest, NGOOffer
+from django.db.models import Prefetch
+from .models import (
+    DonationCategory,
+    DonationCondition,
+    DonationRequest,
+    NGOOffer,
+    SavedDonationRequest,
+)
 from .serializers import (
     DonationCategorySerializer,
     DonationConditionSerializer,
@@ -12,10 +19,12 @@ from .serializers import (
     NGODonationRequestSerializer,
     NGOOfferSerializer,
     NGOAcceptedDonationRequestSerializer,
+    SavedDonationRequestSerializer,
+    DonationCompletionProofSerializer,
 )
 from ecoLoop.utils import api_response
+from ecoLoop.mail import send_donation_status_update
 from accounts.permissions import IsNGO
-
 
 # Create your views here.
 
@@ -197,9 +206,14 @@ class NGODonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         # NGO can see all pending donation requests that are not yet accepted
+        saved_prefetch = Prefetch(
+            "saved_by",
+            queryset=SavedDonationRequest.objects.filter(user=self.request.user),
+            to_attr="user_saved",
+        )
         return (
             DonationRequest.objects.filter(status="pending", accepted_by__isnull=True)
-            .prefetch_related("images")
+            .prefetch_related("images", saved_prefetch)
             .select_related("user", "category", "condition", "accepted_by")
         )
 
@@ -278,6 +292,12 @@ class NGODonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
         donation_request.accepted_by = request.user
         donation_request.save()
 
+        send_donation_status_update(
+            donation_request.user.email,
+            donation_request.user.full_name,
+            "accepted",
+        )
+
         # Save the offer
         offer = offer_serializer.save(
             ngo=request.user, donation_request=donation_request
@@ -293,6 +313,47 @@ class NGODonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
             status_code=status.HTTP_201_CREATED,
         )
 
+    @action(detail=True, methods=["post", "delete"], url_path="save")
+    def save_request(self, request, pk=None):
+        donation_request = self.get_object()
+
+        if request.method == "POST":
+            SavedDonationRequest.objects.get_or_create(
+                user=request.user, donation_request=donation_request
+            )
+            return api_response(
+                result={"is_saved": True},
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        SavedDonationRequest.objects.filter(
+            user=request.user, donation_request=donation_request
+        ).delete()
+        return api_response(
+            result={"is_saved": False},
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+class SavedNGODonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsAuthenticated, IsNGO]
+    serializer_class = SavedDonationRequestSerializer
+
+    def get_queryset(self):
+        return (
+            SavedDonationRequest.objects.filter(user=self.request.user)
+            .select_related(
+                "donation_request",
+                "donation_request__user",
+                "donation_request__category",
+                "donation_request__condition",
+            )
+            .prefetch_related("donation_request__images")
+            .order_by("-created_at")
+        )
+
 
 class NGOAcceptedDonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -302,12 +363,14 @@ class NGOAcceptedDonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
 
     permission_classes = [IsAuthenticated, IsNGO]
     serializer_class = NGOAcceptedDonationRequestSerializer
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get_queryset(self):
         # NGO can only see donation requests accepted by themselves
         return (
             DonationRequest.objects.filter(
-                status="accepted", accepted_by=self.request.user
+                status="accepted",
+                accepted_by=self.request.user,
             )
             .prefetch_related("images", "ngo_offers")
             .select_related("user", "category", "condition", "accepted_by")
@@ -363,13 +426,51 @@ class NGOAcceptedDonationRequestViewSet(viewsets.ReadOnlyModelViewSet):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
+        proof_serializer = DonationCompletionProofSerializer(data=request.data)
+        if not proof_serializer.is_valid():
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message=proof_serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        latest_offer = (
+            NGOOffer.objects.filter(
+                donation_request=donation_request,
+                ngo=request.user,
+            )
+            .order_by("-offer_date")
+            .first()
+        )
+
+        if not latest_offer:
+            return api_response(
+                result=None,
+                is_success=False,
+                error_message="No NGO offer found for this donation request.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        latest_offer.photo_proof = proof_serializer.validated_data["photo_proof"]
+        latest_offer.status = "completed"
+        latest_offer.save(update_fields=["photo_proof", "status"])
+
         donation_request.status = "completed"
         donation_request.save(update_fields=["status"])
+
+        send_donation_status_update(
+            donation_request.user.email,
+            donation_request.user.full_name,
+            "completed",
+        )
 
         NGOOffer.objects.filter(
             donation_request=donation_request,
             ngo=request.user,
-        ).exclude(status="completed").update(status="completed")
+        ).exclude(id=latest_offer.id).exclude(status="completed").update(
+            status="completed"
+        )
 
         return api_response(
             result={
