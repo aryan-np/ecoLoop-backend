@@ -76,6 +76,9 @@ class ProductSerializer(serializers.ModelSerializer):
     owner_email = serializers.EmailField(source="owner.email", read_only=True)
     owner_name = serializers.CharField(source="owner.full_name", read_only=True)
     owner_id = serializers.CharField(source="owner.id", read_only=True)
+    sold_to_email = serializers.EmailField(source="sold_to.email", read_only=True)
+    sold_to_name = serializers.CharField(source="sold_to.full_name", read_only=True)
+    sold_to_id = serializers.CharField(source="sold_to.id", read_only=True)
 
     is_owner = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
@@ -111,6 +114,9 @@ class ProductSerializer(serializers.ModelSerializer):
             "owner_email",
             "owner_name",
             "owner_id",
+            "sold_to_email",
+            "sold_to_name",
+            "sold_to_id",
             "is_owner",
             "is_favorited",
             "favorite_id",
@@ -136,6 +142,9 @@ class ProductSerializer(serializers.ModelSerializer):
             "owner_id",
             "owner_email",
             "owner_name",
+            "sold_to_id",
+            "sold_to_email",
+            "sold_to_name",
             "owner_address1",
             "owner_address2",
             "is_owner",

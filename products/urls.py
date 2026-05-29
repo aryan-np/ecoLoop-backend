@@ -4,6 +4,7 @@ from .views import (
     CategoryViewSet,
     ConditionViewSet,
     GetOwnerProductsViewSet,
+    BoughtProductsView,
     GetUserProductsView,
     FavoriteViewSet,
 )
@@ -18,6 +19,7 @@ router.register(r"favorites", FavoriteViewSet, basename="favorites")
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("bought-items/", BoughtProductsView.as_view(), name="bought-products-list"),
     path(
         "<uuid:user_id>/products/",
         GetUserProductsView.as_view(),

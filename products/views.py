@@ -662,6 +662,51 @@ class GetOwnerProductsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 @extend_schema(tags=["Product"])
+class BoughtProductsView(generics.ListAPIView):
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get_queryset(self):
+        return (
+            Product.objects.filter(sold_to=self.request.user, status="sold")
+            .select_related("owner", "sold_to", "category", "condition")
+            .prefetch_related("images")
+            .order_by("-updated_at")
+        )
+
+    @extend_schema(
+        summary="List bought products",
+        description="Retrieve all marketplace products purchased by the authenticated user.",
+        responses={200: ProductSerializer(many=True)},
+    )
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            result = {
+                "count": getattr(self.paginator.page.paginator, "count", len(page)),
+                "next": self.paginator.get_next_link(),
+                "previous": self.paginator.get_previous_link(),
+                "results": serializer.data,
+            }
+            return api_response(
+                result=result,
+                is_success=True,
+                status_code=status.HTTP_200_OK,
+            )
+
+        serializer = self.get_serializer(queryset, many=True)
+        return api_response(
+            result=serializer.data,
+            is_success=True,
+            status_code=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(tags=["Product"])
 class GetUserProductsView(generics.ListAPIView):
     serializer_class = ProductSerializer
     permission_classes = [AllowAny]

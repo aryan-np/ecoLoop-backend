@@ -36,6 +36,13 @@ class Product(models.Model):
         on_delete=models.CASCADE,
         related_name="products",
     )
+    sold_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="purchased_products",
+    )
 
     title = models.CharField(max_length=150)
     description = models.TextField(blank=True, null=True)

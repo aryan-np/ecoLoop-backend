@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
+from ecoLoop.mail import send_product_sold
 from ecoLoop.utils import api_response
 from payments.models import Payment
 from payments.serializers import (
@@ -26,7 +27,9 @@ class InitiatePaymentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = InitiatePaymentSerializer(data=request.data)
+        serializer = InitiatePaymentSerializer(
+            data=request.data, context={"request": request}
+        )
         if not serializer.is_valid():
             return api_response(
                 result=None,
@@ -36,6 +39,8 @@ class InitiatePaymentView(APIView):
             )
 
         data = serializer.validated_data
+        thread = data.get("resolved_thread")
+        product = data["resolved_product"]
         purchase_order_id = str(uuid.uuid4())
 
         payload = {
@@ -82,7 +87,8 @@ class InitiatePaymentView(APIView):
             status="Initiated",
             payment_url=khalti_data["payment_url"],
             expires_at=khalti_data.get("expires_at"),
-            thread_id=data.get("thread_id"),
+            thread=thread,
+            product=product,
         )
 
         return api_response(
@@ -155,29 +161,41 @@ class VerifyPaymentView(APIView):
 
         is_success = khalti_status == "Completed"
 
-        if is_success and payment.thread_id:
-            thread = payment.thread
-            offer = thread.offers.filter(status="accepted").order_by("-created_at").first()
-            if offer:
-                offer.is_paid = True
-                offer.save(update_fields=["is_paid"])
-
-                if thread.product:
-                    thread.product.status = "sold"
-                    thread.product.save(update_fields=["status"])
-
-                channel_layer = get_channel_layer()
-                async_to_sync(channel_layer.group_send)(
-                    f"thread_{thread.id}",
-                    {
-                        "type": "offer.event",
-                        "offer_id": offer.id,
-                        "amount": str(offer.amount),
-                        "status": "accepted",
-                        "proposed_by": str(offer.proposed_by_id),
-                        "is_paid": True,
-                    },
+        if is_success:
+            product = payment.product or (payment.thread.product if payment.thread_id else None)
+            if product and product.status != "sold":
+                product.status = "sold"
+                product.sold_to = request.user
+                product.save(update_fields=["status", "sold_to"])
+                send_product_sold(
+                    product.owner.email,
+                    product.owner.full_name,
+                    product.title,
                 )
+
+            if payment.thread_id:
+                thread = payment.thread
+                offer = (
+                    thread.offers.filter(status="accepted")
+                    .order_by("-created_at")
+                    .first()
+                )
+                if offer:
+                    offer.is_paid = True
+                    offer.save(update_fields=["is_paid"])
+
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.group_send)(
+                        f"thread_{thread.id}",
+                        {
+                            "type": "offer.event",
+                            "offer_id": offer.id,
+                            "amount": str(offer.amount),
+                            "status": "accepted",
+                            "proposed_by": str(offer.proposed_by_id),
+                            "is_paid": True,
+                        },
+                    )
 
         return api_response(
             result={
